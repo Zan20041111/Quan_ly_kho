@@ -1,0 +1,111 @@
+/* Styles bảng */
+.container{
+    padding: 20px;
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+}
+.title{
+    color: #007bff;
+}
+.table-container {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-container th {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #ccc;
+  background-color: #f0f0f0;
+}
+
+.table-container td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Input tìm kiếm */
+/* Container input + select */
+.filters {
+  display: flex;
+  justify-content: space-between; /* search trái, select phải */
+  align-items: center;
+  margin-bottom: 15px;
+  gap: 10px;
+}
+
+/* Input tìm kiếm */
+.search-input {
+  flex: 1; /* chiếm hết không gian còn lại */
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+/* Dropdown trạng thái */
+.status-select {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+  min-width: 160px;
+}
+
+/* Tùy chọn khi hover */
+.status-select:hover {
+  border-color: #007bff;
+}
+
+/* Tùy chọn focus */
+.status-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 3px rgba(0, 123, 255, 0.5);
+}
+
+
+/* Các nút */
+.container-btn{
+    display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  margin-top: 15px;
+}
+.button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  cursor: pointer;
+}
+
+.button-add {
+  background-color: green;
+}
+
+.button-edit {
+  background-color: #007bff;
+}
+
+.button-delete {
+  background-color: red;
+}
+
+/* Container nút */
+.container-btn {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  margin-top: 15px;
+}
+
+/* Text "Không tìm thấy" */
+.no-data {
+  text-align: center;
+  padding: 10px;
+}
