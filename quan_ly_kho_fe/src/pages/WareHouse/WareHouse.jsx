@@ -43,12 +43,11 @@ function WareHouse() {
   }, [searchText, warehouses]);
 
   // Xử lý thay đổi form
-  // e là event obj từ browser
   const handleInputChange = (e) => {
-    const { name, value } = e.target; // Lấy tên input và giá trị mới
-    setFormData(prev => ({ // dùng 1 state để lưu đúng hơn
-      ...prev, // sẽ coppy toàn bộ state cũ
-      [name]: value //chỉ thay đổi các field đang được nhập
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
     }));
   };
 
@@ -129,16 +128,6 @@ function WareHouse() {
     setIsEditing(true);
   };
 
-  // Xử lý submit form
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (isEditing) {
-      handleEdit();
-    } else {
-      handleAdd();
-    }
-  };
-
   return (
     <div className="warehouse-container">
       <h1 className="warehouse-title">Nhà kho</h1>
@@ -146,7 +135,7 @@ function WareHouse() {
       {/* Form thêm/sửa kho */}
       <div className="warehouse-form">
         <h3>{isEditing ? "Sửa thông tin kho" : "Thêm kho mới"}</h3>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => e.preventDefault()}> {/* Ngăn submit mặc định */}
           <div className="form-row">
             <div className="form-group">
               <label>Mã kho:</label>
@@ -156,6 +145,7 @@ function WareHouse() {
                 value={formData.ma_kho}
                 onChange={handleInputChange}
                 required
+                disabled={isEditing}
               />
             </div>
             <div className="form-group">
@@ -188,12 +178,30 @@ function WareHouse() {
               rows="3"
             />
           </div>
-          <div className="form-buttons">
-            <button type="submit" className="btn btn-primary">
-              {isEditing ? "Cập nhật" : "Thêm"}
+          {/* Hiển thị thông tin kho được chọn */}
+          {selectedWarehouse && (
+            <div className="selected-info">
+              <p>Đang chọn: <strong>{selectedWarehouse.ten_kho}</strong> ({selectedWarehouse.ma_kho})</p>
+            </div>
+          )}
+          {/* Nút thêm xóa sửa*/}
+          <div className="warehouse-buttons">
+            <button className="btn btn-add" onClick={handleAdd}>
+              Thêm
             </button>
-            <button type="button" className="btn btn-secondary" onClick={resetForm}>
-              Hủy
+            <button
+              className="btn btn-edit"
+              onClick={handleEdit}
+              disabled={!selectedWarehouse}
+            >
+              Sửa
+            </button>
+            <button
+              className="btn btn-delete"
+              onClick={handleDelete}
+              disabled={!selectedWarehouse}
+            >
+              Xóa
             </button>
           </div>
         </form>
@@ -244,33 +252,7 @@ function WareHouse() {
         </tbody>
       </table>
 
-      {/* Nút chức năng */}
-      <div className="warehouse-buttons">
-        <button className="btn btn-add" onClick={() => { resetForm(); setIsEditing(false); }}>
-          Thêm
-        </button>
-        <button 
-          className="btn btn-edit" 
-          onClick={handleEdit}
-          disabled={!selectedWarehouse}
-        >
-          Sửa
-        </button>
-        <button 
-          className="btn btn-delete" 
-          onClick={handleDelete}
-          disabled={!selectedWarehouse}
-        >
-          Xóa
-        </button>
-      </div>
-
-      {/* Hiển thị thông tin kho được chọn */}
-      {selectedWarehouse && (
-        <div className="selected-info">
-          <p>Đang chọn: <strong>{selectedWarehouse.ten_kho}</strong> ({selectedWarehouse.ma_kho})</p>
-        </div>
-      )}
+     
     </div>
   );
 }

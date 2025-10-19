@@ -49,5 +49,10 @@ export const warehouseAPI = {
     axiosInstance.delete(`/delete_warehouse/${id}`).then(response => response.data)
 };
 
+export const warehouseLocationAPI = {
+  // Lấy tất cả vị trí kho
+  getAll: () =>
+    axiosInstance.get(`/get_all_warehouses_location`).then(response => response.data),
+}
 // Export mặc định cho các API khác nếu cần
 export default axiosInstance;

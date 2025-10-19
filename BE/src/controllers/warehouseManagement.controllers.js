@@ -1,14 +1,15 @@
 import initModels from "../models/init-models.js";
 import sequelize from "../models/connect.js";
+import { where } from "sequelize";
 const models = initModels(sequelize);
 
 const getAllWarehouses = async(req,res) =>{
     try {
-        const data = await models.kho.findAll();
-        return res.status(200).json(data);
+        const warehouse = await models.kho.findAll();
+        return res.status(200).json(warehouse);
     } catch (error) {
         console.log("Lỗi khi lấy danh sách kho:",error);
-        return res.status(500).json({message:"Lỗi server"});
+        return res.status(500).json({message:"Lỗi server khi lấy danh sách kho"});
     }
 }
 
@@ -20,6 +21,11 @@ const createWarehouse = async(req,res) => {
         if(!ma_kho || !ten_kho || !dia_chi || ghi_chu)
              // trả về lỗi bad request nếu thiếu trường nào trong if yêu cầu
             return res.status(400).json({message:"Vui lòng nhập đầy đủ thông tin mới có thể tạo kho mới!"});
+        const duplicateWarehouseCode = await models.kho.findOne({
+            where: {ma_kho: ma_kho}
+        });
+        if(duplicateWarehouseCode)
+            return res.status(409).json({message: "Mã kho này đã tồn tại trong hệ thống"});
         // Tạo bản ghi mới trong bảng kho bằng Sequelize , await là sẽ đợi quá trình tạo xong trước khi tiếp tục
         const newWarehouse = await models.kho.create({
             ma_kho,
@@ -41,18 +47,18 @@ const updateWarehouse = async (req, res) => {
         const { ma_kho, ten_kho, dia_chi, ghi_chu } = req.body; 
 
         // Tìm kho theo ID
-        const wareHouse = await models.kho.findByPk(id);
-        if (!wareHouse)
+        const warehouse = await models.kho.findByPk(id);
+        if (!warehouse)
             return res.status(404).json({ message: "Kho không tồn tại!" });
         // Cập nhật thông tin
-        wareHouse.ma_kho = ma_kho || wareHouse.ma_kho;
-        wareHouse.ten_kho = ten_kho || wareHouse.ten_kho;
-        wareHouse.dia_chi = dia_chi || wareHouse.dia_chi;
-        wareHouse.ghi_chu = ghi_chu || wareHouse.ghi_chu;
+        warehouse.ma_kho = ma_kho || warehouse.ma_kho;
+        warehouse.ten_kho = ten_kho || warehouse.ten_kho;
+        warehouse.dia_chi = dia_chi || warehouse.dia_chi;
+        warehouse.ghi_chu = ghi_chu || warehouse.ghi_chu;
 
-        await wareHouse.save(); // Lưu thay đổi
+        await warehouse.save(); // Lưu thay đổi
 
-        return res.status(200).json({ message: "Cập nhật kho thành công.", data: wareHouse });
+        return res.status(200).json({ message: "Cập nhật kho thành công.", data: warehouse });
     } catch (error) {
         console.log("Lỗi khi cập nhật kho:", error);
         return res.status(500).json({ message: "Lỗi server khi cập nhật kho" });
@@ -62,10 +68,10 @@ const updateWarehouse = async (req, res) => {
 const deleteWarehouse = async(req,res) =>{
     try {
         const {id} = req.params; 
-        const wareHouse = await models.kho.findByPk(id);
-        if(!wareHouse)
+        const warehouse = await models.kho.findByPk(id);
+        if(!warehouse)
             return res.status(404).json({message:"Kho không tồn tại!"});
-        await wareHouse.destroy();
+        await warehouse.destroy();
         return res.status(200).json({message:"Xóa kho thành công"});
     } catch (error) {
         console.log("Lỗi khi xóa kho", error);

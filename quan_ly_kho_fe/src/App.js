@@ -3,7 +3,7 @@ import Sidebar from "./components/SideBar/SideBar.jsx";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home.jsx";
 import WareHouse from "./pages/WareHouse/WareHouse.jsx";
-import LocationsWareHouses from "./pages/LocationsWareHouses/LocationsWareHouses.jsx";
+import WarehouseLocation from "./pages/WarehouseLocation/WarehouseLocation.jsx";
 import Customers from "./pages/Customers/Customers.jsx";
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -52,7 +52,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home/>} />
             <Route path="/warehouses" element={<WareHouse/>} />
-            <Route path="/locations" element={<LocationsWareHouses/>} />
+            <Route path="/locations" element={<WarehouseLocation/>} />
             <Route path="/customers" element={<Customers/>} />
             <Route path="/products" element={<div>Sản phẩm</div>} />
             <Route path="/imports" element={<div>Nhập kho</div>} />

@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import warehouseManagementRoutes from './src/routes/warehouseManagement.router.js';
+import warehouseLocationRoutes from './src/routes/warehouseLocation.router.js';
 dotenv.config();
 
 const app = express();
@@ -11,6 +12,7 @@ app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(warehouseManagementRoutes);
+app.use(warehouseLocationRoutes);
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
 });

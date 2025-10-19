@@ -1,5 +1,6 @@
 .sidebar {
   width: 240px;
+  height: 100vh;
   background-color: #1e40af; /* xanh lam đậm */
   color: white;
   display: flex;
@@ -7,7 +8,6 @@
   box-shadow: 2px 0 10px rgba(0,0,0,0.1);
 }
 
-/* Mobile behavior: hidden by default, slide in when open */
 /* Trên màn hình nhỏ, sidebar ẩn ra ngoài (off-canvas) cho đến khi có class `.open` */
 @media (max-width: 768px) {
   .sidebar {
@@ -17,6 +17,7 @@
     transform: translateX(-100%);
     transition: transform 0.25s ease;
     z-index: 1000;
+    
   }
 
   .sidebar.open {
