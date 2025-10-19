@@ -71,6 +71,16 @@ const deleteWarehouse = async(req,res) =>{
         const warehouse = await models.kho.findByPk(id);
         if(!warehouse)
             return res.status(404).json({message:"Kho không tồn tại!"});
+        
+        const warehouseLocations = await models.vi_tri_kho.findAll({
+            where: { kho_id: id }
+        });
+
+        if (warehouseLocations.length > 0) {
+            return res.status(400).json({ 
+                message: "Không thể xóa kho vì còn vị trí kho đang sử dụng. Vui lòng xóa hoặc chuyển các vị trí kho trước." 
+            });
+        }
         await warehouse.destroy();
         return res.status(200).json({message:"Xóa kho thành công"});
     } catch (error) {

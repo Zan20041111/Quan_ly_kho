@@ -43,15 +43,18 @@ const updateWarehouseLocation = async(req, res) => {
         const {id} = req.params;
         const {ma_vi_tri, ten_vi_tri, kho_id, trang_thai} = req.body;
 
-        const warehouse = await models.vi_tri_kho.findByPk(id);
-        if(!warehouse)
-            return res.status(404).json({message: "Vị trí kho này không tồn tại!", data: warehouse})
-        warehouse.ma_vi_tri = ma_vi_tri;
-        warehouse.ten_vi_tri = ten_vi_tri;
-        warehouse.kho_id = kho_id;
-        warehouse.trang_thai = trang_thai;
-        await warehouse.save();
-        return res.status(200).json({message: "Cập nhật thành công", data: warehouse});
+        const warehouseLocation = await models.vi_tri_kho.findByPk(id);
+        if(!warehouseLocation)
+            return res.status(404).json({message: "Vị trí kho này không tồn tại!", data: warehouseLocation})
+        warehouseLocation.ma_vi_tri = ma_vi_tri || warehouseLocation.ma_vi_tri;
+        warehouseLocation.ten_vi_tri = ten_vi_tri || warehouseLocation.ten_vi_tri;
+        warehouseLocation.kho_id = kho_id || warehouseLocation.kho_id;
+        // cập nhật trạng thái mới
+        if (trang_thai !== undefined) {
+            warehouseLocation.trang_thai = trang_thai;
+        }
+        await warehouseLocation.save();
+        return res.status(200).json({message: "Cập nhật thành công", data: warehouseLocation});
     } catch (error) {
         console.log("Lỗi khi cập nhật vị trí kho:", error);
         return res.status(500).json({message: "Lỗi server khi cập nhật kho"});
@@ -61,11 +64,13 @@ const updateWarehouseLocation = async(req, res) => {
 const deleteWarehouseLocation = async(req, res) => {
     try {
         const {id} = req.params;
-        const warehouse = await models.vi_tri_kho.findByPk(id)
-        if(!warehouse)
+        const warehouseLocation = await models.vi_tri_kho.findByPk(id)
+        if(!warehouseLocation)
             return res.status(404).json({message: "Vị trí không tồn tại!"})
-        await warehouse.destroy();
-        return res.status(200).json({message: "Xóa vị trị kho thành công", data: warehouse})
+        if(warehouseLocation.trang_thai !== 0)
+            return res.status(400).json({message: "Không thể xóa vị trí kho đang được sử dụng, chỉ có thể xóa khi vị trí này trống"});
+        await warehouseLocation.destroy();
+        return res.status(200).json({message: "Xóa vị trị kho thành công", data: warehouseLocation})
     } catch (error) {
         console.log("Lỗi khi xóa vị trí kho: ", error);
         return res.status(500).json({message: "Lỗi server khi xóa vị trí kho"});     

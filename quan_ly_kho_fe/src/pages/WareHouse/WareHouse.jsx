@@ -6,8 +6,8 @@ function WareHouse() {
   const [warehouses, setWarehouses] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [filteredList, setFilteredList] = useState([]);
-  const [selectedWarehouse, setSelectedWarehouse] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     ma_kho: "",
     ten_kho: "",
@@ -51,200 +51,133 @@ function WareHouse() {
     }));
   };
 
-  // Reset form
-  const resetForm = () => {
+  // Thêm kho mới
+  const handleAddNew = () => {
+    setEditingItem(null);
     setFormData({
       ma_kho: "",
       ten_kho: "",
       dia_chi: "",
       ghi_chu: ""
     });
-    setSelectedWarehouse(null);
-    setIsEditing(false);
-  };
-
-  // Thêm kho mới
-  const handleAdd = async () => {
-    try {
-      await warehouseAPI.create(formData);
-      alert("Thêm kho thành công!");
-      resetForm();
-      fetchWarehouses();
-    } catch (error) {
-      console.error("Lỗi khi thêm kho:", error);
-      alert("Lỗi khi thêm kho!");
-    }
+    setShowForm(true);
   };
 
   // Sửa kho
-  const handleEdit = async () => {
-    if (!selectedWarehouse) {
-      alert("Vui lòng chọn kho để sửa!");
-      return;
-    }
-
-    try {
-      await warehouseAPI.update(selectedWarehouse.id, formData);
-      alert("Cập nhật kho thành công!");
-      resetForm();
-      fetchWarehouses();
-    } catch (error) {
-      console.error("Lỗi khi cập nhật kho:", error);
-      alert("Lỗi khi cập nhật kho!");
-    }
+  const handleEdit = (item) => {
+    setEditingItem(item);
+    setFormData({
+      ma_kho: item.ma_kho,
+      ten_kho: item.ten_kho,
+      dia_chi: item.dia_chi,
+      ghi_chu: item.ghi_chu
+    });
+    setShowForm(true);
   };
 
   // Xóa kho
-  const handleDelete = async () => {
-    if (!selectedWarehouse) {
-      alert("Vui lòng chọn kho để xóa!");
-      return;
-    }
-
-    if (!window.confirm(`Bạn có chắc muốn xóa kho "${selectedWarehouse.ten_kho}"?`)) {
-      return;
-    }
-
-    try {
-      await warehouseAPI.delete(selectedWarehouse.id);
-      alert("Xóa kho thành công!");
-      resetForm();
-      fetchWarehouses();
-    } catch (error) {
-      console.error("Lỗi khi xóa kho:", error);
-      alert("Lỗi khi xóa kho!");
+  const handleDelete = async (id, tenKho) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa kho "${tenKho}" không?`)) {
+      try {
+        await warehouseAPI.delete(id);
+        alert("Xóa kho thành công!");
+        fetchWarehouses();
+      } catch (error) {
+        console.error("Lỗi khi xóa kho:", error);
+        alert("Lỗi khi xóa kho!");
+      }
     }
   };
 
-  // Chọn kho từ bảng
-  const handleSelectWarehouse = (warehouse) => {
-    setSelectedWarehouse(warehouse);
-    setFormData({
-      ma_kho: warehouse.ma_kho,
-      ten_kho: warehouse.ten_kho,
-      dia_chi: warehouse.dia_chi,
-      ghi_chu: warehouse.ghi_chu
-    });
-    setIsEditing(true);
+  // Submit form
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      if (editingItem) {
+        // Cập nhật
+        await warehouseAPI.update(editingItem.id, formData);
+        alert("Cập nhật kho thành công!");
+      } else {
+        // Thêm mới
+        await warehouseAPI.create(formData);
+        alert("Thêm kho thành công!");
+      }
+      
+      setShowForm(false);
+      fetchWarehouses();
+    } catch (error) {
+      console.error("Lỗi khi lưu kho:", error);
+      alert("Lỗi khi lưu kho!");
+    }
+  };
+
+  // Đóng form
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setEditingItem(null);
   };
 
   return (
-    <div className="warehouse-container">
-      <h1 className="warehouse-title">Nhà kho</h1>
+    <div className="container">
+      <h1 className="title">Quản lý kho</h1>
 
-      {/* Form thêm/sửa kho */}
-      <div className="warehouse-form">
-        <h3>{isEditing ? "Sửa thông tin kho" : "Thêm kho mới"}</h3>
-        <form onSubmit={(e) => e.preventDefault()}> {/* Ngăn submit mặc định */}
-          <div className="form-row">
-            <div className="form-group">
-              <label>Mã kho:</label>
-              <input
-                type="text"
-                name="ma_kho"
-                value={formData.ma_kho}
-                onChange={handleInputChange}
-                required
-                disabled={isEditing}
-              />
-            </div>
-            <div className="form-group">
-              <label>Tên kho:</label>
-              <input
-                type="text"
-                name="ten_kho"
-                value={formData.ten_kho}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Địa chỉ:</label>
-              <input
-                type="text"
-                name="dia_chi"
-                value={formData.dia_chi}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-          </div>
-          <div className="form-group">
-            <label>Ghi chú:</label>
-            <textarea
-              name="ghi_chu"
-              value={formData.ghi_chu}
-              onChange={handleInputChange}
-              rows="3"
-            />
-          </div>
-          {/* Hiển thị thông tin kho được chọn */}
-          {selectedWarehouse && (
-            <div className="selected-info">
-              <p>Đang chọn: <strong>{selectedWarehouse.ten_kho}</strong> ({selectedWarehouse.ma_kho})</p>
-            </div>
-          )}
-          {/* Nút thêm xóa sửa*/}
-          <div className="warehouse-buttons">
-            <button className="btn btn-add" onClick={handleAdd}>
-              Thêm
-            </button>
-            <button
-              className="btn btn-edit"
-              onClick={handleEdit}
-              disabled={!selectedWarehouse}
-            >
-              Sửa
-            </button>
-            <button
-              className="btn btn-delete"
-              onClick={handleDelete}
-              disabled={!selectedWarehouse}
-            >
-              Xóa
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Tìm kiếm */}
-      <div className="warehouse-search">
+      {/* Bộ lọc và tìm kiếm */}
+      <div className="filters">
         <input
           type="text"
-          placeholder="Nhập để tìm kiếm..."
+          className="search-input"
+          placeholder="Nhập mã hoặc tên kho để tìm kiếm"
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
         />
+
+        {/* Nút thêm mới */}
+        <button className="btn-add" onClick={handleAddNew}>
+          + Thêm kho mới
+        </button>
       </div>
 
       {/* Bảng danh sách kho */}
-      <table className="warehouse-table">
+      <table className="table-container">
         <thead>
           <tr>
             <th>Mã kho</th>
             <th>Tên kho</th>
             <th>Địa chỉ</th>
             <th>Ghi chú</th>
+            <th>Thao tác</th>
           </tr>
         </thead>
         <tbody>
           {filteredList.length > 0 ? (
             filteredList.map((item) => (
-              <tr 
-                key={item.id} 
-                className={selectedWarehouse?.id === item.id ? "selected" : ""}
-                onClick={() => handleSelectWarehouse(item)}
-                style={{cursor: 'pointer'}}
-              >
+              <tr key={item.id}>
                 <td>{item.ma_kho}</td>
                 <td>{item.ten_kho}</td>
                 <td>{item.dia_chi}</td>
                 <td>{item.ghi_chu}</td>
+                <td>
+                  <div className="action-buttons">
+                    <button 
+                      className="btn-edit"
+                      onClick={() => handleEdit(item)}
+                    >
+                      Sửa
+                    </button>
+                    <button 
+                      className="btn-delete"
+                      onClick={() => handleDelete(item.id, item.ten_kho)}
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="4" className="no-result">
+              <td colSpan="5" className="no-data">
                 Không tìm thấy kho nào
               </td>
             </tr>
@@ -252,7 +185,73 @@ function WareHouse() {
         </tbody>
       </table>
 
-     
+      {/* Form thêm/sửa */}
+      {showForm && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>{editingItem ? "Sửa thông tin kho" : "Thêm kho mới"}</h2>
+              <button className="close-btn" onClick={handleCloseForm}>×</button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="form-container">
+              <div className="form-group">
+                <label>Mã kho:</label>
+                <input
+                  type="text"
+                  name="ma_kho"
+                  value={formData.ma_kho}
+                  onChange={handleInputChange}
+                  required
+                    disabled={editingItem}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Tên kho:</label>
+                <input
+                  type="text"
+                  name="ten_kho"
+                  value={formData.ten_kho}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Địa chỉ:</label>
+                <input
+                  type="text"
+                  name="dia_chi"
+                  value={formData.dia_chi}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Ghi chú:</label>
+                <textarea
+                  name="ghi_chu"
+                  value={formData.ghi_chu}
+                  onChange={handleInputChange}
+                  rows="3"
+                  className="form-textarea"
+                />
+              </div>
+              
+              <div className="form-actions">
+                <button type="button" onClick={handleCloseForm} className="btn-cancel">
+                  Hủy
+                </button>
+                <button type="submit" className="btn-submit">
+                  {editingItem ? "Cập nhật" : "Thêm mới"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
