@@ -47,7 +47,7 @@ const updateWarehouse = async (req, res) => {
     const { ma_kho, ten_kho, dia_chi, ghi_chu } = req.body;
     const checkID = await models.kho.findByPk(id);
     if (!checkID) {
-      return res.status(404).json({ message: "Kho này không tồn tại!" });
+      return res.status(400).json({ message: "Kho này không tồn tại!" });
     }
     const warehouse = await models.kho.update( // cập nhật dữ liệu
       { ma_kho, ten_kho, dia_chi, ghi_chu },
@@ -66,7 +66,7 @@ const deleteWarehouse = async(req,res) =>{
         const {id} = req.params; 
         const warehouse = await models.kho.findByPk(id);
         if(!warehouse)
-            return res.status(404).json({message:"Kho không tồn tại!"});
+            return res.status(400).json({message:"Kho không tồn tại!"});
         
         const warehouseLocations = await models.vi_tri_kho.findAll({
             where: { kho_id: id }

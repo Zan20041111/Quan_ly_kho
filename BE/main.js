@@ -14,7 +14,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(warehouseManagementRoutes);
 app.use(warehouseLocationRoutes);
-app.use(customerRoutes);
+app.use(customerRoutes);  
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
 });

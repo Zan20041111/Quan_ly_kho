@@ -16,7 +16,7 @@ const createWarehouseLocation = async(req, res) => {
     try {
         const{ma_vi_tri, ten_vi_tri, kho_id, trang_thai} = req.body;
         if(!ma_vi_tri || !ten_vi_tri || !kho_id)
-            return res.status(404).json({message: "Không được để trống, vui lòng nhập đầy đủ thông tin!"})
+            return res.status(400).json({message: "Không được để trống, vui lòng nhập đầy đủ thông tin!"})
         // const duplicateLocationCode = await models.vi_tri_kho.findOne({
         //     where: { ma_vi_tri: ma_vi_tri }
         // });
@@ -47,7 +47,7 @@ const updateWarehouseLocation = async (req, res) => {
     const checkID = await models.vi_tri_kho.findByPk(id);
     
     if (!checkID) {
-      return res.status(404).json({ message: "Vị trí kho này không tồn tại!" });
+      return res.status(400).json({ message: "Vị trí kho này không tồn tại!" });
     }
     // Thực hiện cập nhật
     const warehouseLocation = await models.vi_tri_kho.update(
@@ -69,7 +69,7 @@ const deleteWarehouseLocation = async(req, res) => {
         const {id} = req.params;
         const warehouseLocation = await models.vi_tri_kho.findByPk(id)
         if(!warehouseLocation)
-            return res.status(404).json({message: "Vị trí không tồn tại!"})
+            return res.status(400).json({message: "Vị trí kho không tồn tại!"})
         if(warehouseLocation.trang_thai !== 0)
             return res.status(400).json({message: "Không thể xóa vị trí kho đang được sử dụng, chỉ có thể xóa khi vị trí này trống"});
         await warehouseLocation.destroy();

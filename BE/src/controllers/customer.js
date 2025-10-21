@@ -17,7 +17,7 @@ const createCustomer = async(req, res) => {
     try {
         const {ma_kh, ten_kh, sdt, dia_chi, email} = req.body;
         if(!ma_kh || !ten_kh || !sdt || !dia_chi)
-            return res.status(404).json({message: "Không được để trống, vui lòng nhập đầy đủ thông tin!"});
+            return res.status(400).json({message: "Không được để trống, vui lòng nhập đầy đủ thông tin!"});
         const duplicateCustomserCode = await models.khach_hang.findOne({
             where:{ma_kh: ma_kh}
         });
@@ -43,7 +43,7 @@ const updateCustomer = async (req, res) => {
     const { ma_kh, ten_kh, sdt, dia_chi, email } = req.body
     const checkID = await models.khach_hang.findByPk(id);
     if (!checkID) {
-      return res.status(404).json({ message: "Khách hàng này không tồn tại!" });
+      return res.status(400).json({ message: "Khách hàng này không tồn tại!" });
     }
     const customer = await models.khach_hang.update(
       { ma_kh, ten_kh, sdt, dia_chi, email },
@@ -60,7 +60,7 @@ const deleteCustomer = async (req, res) => {
         const {id} = req.params;
         const customer = await models.khach_hang.findByPk(id)
         if(!customer)
-            return res.status(404).json({message: "Khách hàng này không tồn tại"});
+            return res.status(400).json({message: "Khách hàng này không tồn tại"});
         await customer.destroy();
         return res.status(200).json({message: "Xóa khách hàng thành công"});
     } catch (error) {
