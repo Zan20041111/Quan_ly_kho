@@ -42,28 +42,24 @@ const createWarehouse = async(req,res) => {
 }
 
 const updateWarehouse = async (req, res) => {
-    try {
-        const { id } = req.params; // ID kho cần sửa
-        const { ma_kho, ten_kho, dia_chi, ghi_chu } = req.body; 
-
-        // Tìm kho theo ID
-        const warehouse = await models.kho.findByPk(id);
-        if (!warehouse)
-            return res.status(404).json({ message: "Kho không tồn tại!" });
-        // Cập nhật thông tin
-        warehouse.ma_kho = ma_kho || warehouse.ma_kho;
-        warehouse.ten_kho = ten_kho || warehouse.ten_kho;
-        warehouse.dia_chi = dia_chi || warehouse.dia_chi;
-        warehouse.ghi_chu = ghi_chu || warehouse.ghi_chu;
-
-        await warehouse.save(); // Lưu thay đổi
-
-        return res.status(200).json({ message: "Cập nhật kho thành công.", data: warehouse });
-    } catch (error) {
-        console.log("Lỗi khi cập nhật kho:", error);
-        return res.status(500).json({ message: "Lỗi server khi cập nhật kho" });
+  try {
+    const {id} = req.params;
+    const { ma_kho, ten_kho, dia_chi, ghi_chu } = req.body;
+    const checkID = await models.kho.findByPk(id);
+    if (!checkID) {
+      return res.status(404).json({ message: "Kho này không tồn tại!" });
     }
-}
+    const warehouse = await models.kho.update( // cập nhật dữ liệu
+      { ma_kho, ten_kho, dia_chi, ghi_chu },
+      { where: {id} }
+    );
+    return res.status(200).json({message: "Cập nhật kho thành công.", data: warehouse});
+  } catch (error) {
+    console.error("Lỗi khi cập nhật kho:", error);
+    return res.status(500).json({ message: "Lỗi server khi cập nhật kho" });
+  }
+};
+
 
 const deleteWarehouse = async(req,res) =>{
     try {

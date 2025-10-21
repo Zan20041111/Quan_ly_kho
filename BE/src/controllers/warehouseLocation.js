@@ -17,13 +17,13 @@ const createWarehouseLocation = async(req, res) => {
         const{ma_vi_tri, ten_vi_tri, kho_id, trang_thai} = req.body;
         if(!ma_vi_tri || !ten_vi_tri || !kho_id)
             return res.status(404).json({message: "Không được để trống, vui lòng nhập đầy đủ thông tin!"})
-        const duplicateLocationCode = await models.vi_tri_kho.findOne({
-            where: { ma_vi_tri: ma_vi_tri }
-        });
-        if(duplicateLocationCode) {
-            return res.status(409).json({message: "Mã vị trí đã tồn tại trong hệ thống!"});
-        }
-        const warehouse = await models.vi_tri_kho.create(
+        // const duplicateLocationCode = await models.vi_tri_kho.findOne({
+        //     where: { ma_vi_tri: ma_vi_tri }
+        // });
+        // if(duplicateLocationCode) {
+        //     return res.status(409).json({message: "Mã vị trí đã tồn tại trong hệ thống!"});
+        // }
+        const warehouseLocation = await models.vi_tri_kho.create(
             {
                 ma_vi_tri,
                 ten_vi_tri,
@@ -31,35 +31,38 @@ const createWarehouseLocation = async(req, res) => {
                 trang_thai
             }
         );
-        return res.status(201).json({message: "Tạo vị trị kho mới thành công", data: warehouse});
+        return res.status(201).json({message: "Tạo vị trị kho mới thành công", data: warehouseLocation});
     } catch (error) {
         console.log("Lỗi khi tạo vị trí kho mới: ",error);
         return req.status(500).json({message: "Lỗi server khi tạo vị trí kho mới"});
     }
 }
 
-const updateWarehouseLocation = async(req, res) => {
-    try {
-        const {id} = req.params;
-        const {ma_vi_tri, ten_vi_tri, kho_id, trang_thai} = req.body;
+const updateWarehouseLocation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ma_vi_tri, ten_vi_tri, kho_id, trang_thai } = req.body;
 
-        const warehouseLocation = await models.vi_tri_kho.findByPk(id);
-        if(!warehouseLocation)
-            return res.status(404).json({message: "Vị trí kho này không tồn tại!", data: warehouseLocation})
-        warehouseLocation.ma_vi_tri = ma_vi_tri || warehouseLocation.ma_vi_tri;
-        warehouseLocation.ten_vi_tri = ten_vi_tri || warehouseLocation.ten_vi_tri;
-        warehouseLocation.kho_id = kho_id || warehouseLocation.kho_id;
-        // cập nhật trạng thái mới
-        if (trang_thai !== undefined) {
-            warehouseLocation.trang_thai = trang_thai;
-        }
-        await warehouseLocation.save();
-        return res.status(200).json({message: "Cập nhật thành công", data: warehouseLocation});
-    } catch (error) {
-        console.log("Lỗi khi cập nhật vị trí kho:", error);
-        return res.status(500).json({message: "Lỗi server khi cập nhật kho"});
+    // Kiểm tra xem vị trí kho có tồn tại không
+    const checkID = await models.vi_tri_kho.findByPk(id);
+    
+    if (!checkID) {
+      return res.status(404).json({ message: "Vị trí kho này không tồn tại!" });
     }
-}
+    // Thực hiện cập nhật
+    const warehouseLocation = await models.vi_tri_kho.update(
+      { ma_vi_tri, ten_vi_tri, kho_id, trang_thai },
+      { where: { id } }
+    );
+    return res.status(200).json({message: "Cập nhật thành công", data: warehouseLocation});
+  } catch (error) {
+    console.error("Lỗi khi cập nhật vị trí kho:", error);
+    return res
+      .status(500)
+      .json({ message: "Lỗi server khi cập nhật vị trí kho" });
+  }
+};
+
 
 const deleteWarehouseLocation = async(req, res) => {
     try {
