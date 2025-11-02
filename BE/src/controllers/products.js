@@ -1,6 +1,6 @@
 import initModels from "../models/init-models.js";
 import sequelize from "../models/connect.js";
-import { Op, where } from "sequelize";
+import { Op} from "sequelize";
 const models = initModels(sequelize);
 const getAllProducts = async(req, res) =>{
     try {
@@ -8,6 +8,25 @@ const getAllProducts = async(req, res) =>{
         return res.status(200).json({message:"Lấy danh sách sản phẩm thành công", data:product});
     } catch (error) {
         return res.status(500).json({message: error.message});
+    }
+}
+const searchProduct = async (req, res) => {
+    try {
+        const { keyword } = req.query;
+        if (!keyword || keyword.trim() === '') {
+            return res.status(400).json({ message: "Vui lòng nhập từ khóa tìm kiếm!" });
+        }
+        const product = await models.san_pham.findAll({
+            where: { ten_sp: { [Op.like]: `%${keyword}%` } }
+        });
+        if (product.length === 0) {
+            return res.status(404).json({
+                message: `Không tìm thấy tên sản phẩm có chứa "${keyword}". Vui lòng nhập đúng tên sản phẩm cần tìm!`
+            });
+        }
+        return res.status(200).json({ message: "Tìm kiếm sản phẩm thành công", data: product });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
     }
 }
 
@@ -90,6 +109,7 @@ const deleteProduct = async(req, res) =>{
 }
 export{
     getAllProducts,
+    searchProduct,
     createProduct,
     updateProduct,
     deleteProduct,
