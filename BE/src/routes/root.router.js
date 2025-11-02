@@ -1,0 +1,11 @@
+import express from "express";
+import warehouseManagementRoutes from "./warehouseManagement.router.js";
+import warehouseLocationRoutes from "./warehouseLocation.router.js";
+import customerRoutes from "./customer.router.js";
+import productRoutes from "./products.router.js";
+const rootRoutes = express.Router();
+rootRoutes.use("/warehouse",warehouseManagementRoutes);
+rootRoutes.use("/warehouse-location",warehouseLocationRoutes);
+rootRoutes.use("/customer",customerRoutes);
+rootRoutes.use("/product/",productRoutes);
+export default rootRoutes;

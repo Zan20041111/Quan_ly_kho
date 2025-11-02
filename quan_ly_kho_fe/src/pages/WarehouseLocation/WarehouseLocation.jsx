@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { warehouseLocationAPI } from "../../utils/fetchFromAPI.js";
+import { warehouseLocationAPI, warehouseAPI } from "../../utils/fetchFromAPI.js";
 import "../WarehouseLocation/WarehouseLocation.css";
 
 function WarehouseLocation() {
     const [warehouseLocationList, setWarehousesLocationList] = useState([]);
-    const [searchText, setSearchText] = useState("");
+    const [warehouses, setWarehouses] = useState([]);
+    const [selectedWarehouseId, setSelectedWarehouseId] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [filteredList, setFilteredList] = useState([]);
     const [editingItem, setEditingItem] = useState(null);
@@ -28,24 +29,113 @@ function WarehouseLocation() {
         }
     };
 
+    // Fetch danh sách kho
+    const fetchWarehouses = async () => {
+        try {
+            const data = await warehouseAPI.getAll();
+            setWarehouses(data);
+        } catch (error) {
+            console.error("Lỗi khi lấy danh sách kho:", error);
+        }
+    };
+
     // Load dữ liệu khi component mount
     useEffect(() => {
         fetchWarehouseLocations();
+        fetchWarehouses();
     }, []);
 
-    // Lọc danh sách khi searchText hoặc statusFilter thay đổi
-    useEffect(() => {
-        let filtered = warehouseLocationList.filter((item) =>
-            item.ma_vi_tri.toLowerCase().includes(searchText.toLowerCase()) ||
-            item.ten_vi_tri.toLowerCase().includes(searchText.toLowerCase())
-        );
-
-        if (statusFilter !== "") {
-            filtered = filtered.filter(item => item.trang_thai === parseInt(statusFilter));
+    // Lấy vị trí kho theo ID kho
+    const fetchLocationByWarehouse = async (warehouseId, statusFilterValue = null) => {
+        // Sử dụng statusFilterValue nếu được truyền vào, nếu không thì dùng statusFilter từ state
+        const filterValue = statusFilterValue !== null ? statusFilterValue : statusFilter;
+        
+        if (!warehouseId) {
+            // Nếu không chọn kho, hiển thị tất cả
+            if (filterValue) {
+                // Nếu đang filter theo trạng thái, giữ filter đó
+                const mockEvent = { target: { value: filterValue } };
+                await handleStatusFilterChange(mockEvent);
+            } else {
+                fetchWarehouseLocations();
+            }
+            return;
         }
+        try {
+            const response = await warehouseLocationAPI.getByID(warehouseId);
+            if (response.data && Array.isArray(response.data)) {
+                // Nếu có filter trạng thái, lọc thêm trong danh sách vị trí của kho
+                if (filterValue) {
+                    const filtered = response.data.filter(item => 
+                        item.trang_thai.toString() === filterValue
+                    );
+                    setFilteredList(filtered);
+                } else {
+                    setFilteredList(response.data);
+                }
+            } else {
+                setFilteredList([]);
+            }
+        } catch (error) {
+            if (error.response?.status === 404) {
+                setFilteredList([]);
+                alert(error.response.data.message);
+            } else {
+                console.error("Lỗi khi lấy vị trí kho theo ID:", error);
+                alert("Lỗi khi tải dữ liệu vị trí kho!");
+            }
+        }
+    };
 
-        setFilteredList(filtered);
-    }, [searchText, statusFilter, warehouseLocationList]);
+    // Xử lý khi chọn kho
+    const handleWarehouseChange = async (e) => {
+        const warehouseId = e.target.value;
+        setSelectedWarehouseId(warehouseId);
+        await fetchLocationByWarehouse(warehouseId);
+    };
+
+    // Tìm kiếm vị trí kho theo trạng thái
+    const handleStatusFilterChange = async (e) => {
+        const selectedStatus = e.target.value;
+        setStatusFilter(selectedStatus);
+        
+        if (!selectedStatus || selectedStatus === '') {
+            // Nếu chọn "Tất cả trạng thái"
+            if (selectedWarehouseId) {
+                // Nếu đang chọn kho, lấy lại danh sách vị trí của kho đó (không filter)
+                await fetchLocationByWarehouse(selectedWarehouseId, '');
+            } else {
+                // Hiển thị tất cả
+                fetchWarehouseLocations();
+            }
+        } else {
+            // Nếu có chọn kho, lọc trong danh sách vị trí của kho đó
+            if (selectedWarehouseId) {
+                // Truyền selectedStatus trực tiếp vào hàm để đảm bảo dùng đúng giá trị
+                await fetchLocationByWarehouse(selectedWarehouseId, selectedStatus);
+            } else {
+                // Gọi API tìm kiếm với giá trị trạng thái
+                try {
+                    const response = await warehouseLocationAPI.search(selectedStatus);
+                    if (response.data && Array.isArray(response.data)) {
+                        setFilteredList(response.data);
+                    } else {
+                        setFilteredList([]);
+                    }
+                } catch (error) {
+                    if (error.response?.status === 404) {
+                        setFilteredList([]);
+                        alert(error.response.data.message);
+                    } else if (error.response?.status === 400) {
+                        alert(error.response.data.message);
+                    } else {
+                        console.error("Lỗi khi tìm kiếm:", error);
+                        alert("Lỗi khi tìm kiếm vị trí kho!");
+                    }
+                }
+            }
+        }
+    };
 
     // Hàm chuyển đổi số thành text trạng thái
     const getStatusText = (status) => {
@@ -92,7 +182,15 @@ function WarehouseLocation() {
             try {
                 await warehouseLocationAPI.delete(id);
                 alert("Xóa vị trí kho thành công!");
-                fetchWarehouseLocations();
+                // Sau khi xóa, reload lại dữ liệu theo context hiện tại
+                if (selectedWarehouseId) {
+                    await fetchLocationByWarehouse(selectedWarehouseId);
+                } else if (statusFilter) {
+                    const mockEvent = { target: { value: statusFilter } };
+                    await handleStatusFilterChange(mockEvent);
+                } else {
+                    fetchWarehouseLocations();
+                }
             } catch (error) {
                 if (error.response && error.response.status === 400) {
                     alert(error.response.data.message);
@@ -148,7 +246,15 @@ function WarehouseLocation() {
             }
             
             setShowForm(false);
-            fetchWarehouseLocations();
+            // Sau khi thêm/sửa, reload lại dữ liệu theo context hiện tại
+            if (selectedWarehouseId) {
+                await fetchLocationByWarehouse(selectedWarehouseId);
+            } else if (statusFilter) {
+                const mockEvent = { target: { value: statusFilter } };
+                await handleStatusFilterChange(mockEvent);
+            } else {
+                fetchWarehouseLocations();
+            }
         } catch (error) {
             console.error("Lỗi khi lưu vị trí kho:", error);
             alert("Lỗi khi lưu vị trí kho!");
@@ -167,28 +273,59 @@ function WarehouseLocation() {
 
             {/* Bộ lọc và tìm kiếm */}
             <div className="filters">
-                <input
-                    type="text"
-                    className="search-input"
-                    placeholder="Nhập mã hoặc tên vị trí để tìm kiếm"
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                />
+                {/* Chọn kho để xem vị trí */}
+                <div className="filter-group">
+                    <label>Chọn kho:</label>
+                    <select
+                        className="warehouse-select"
+                        value={selectedWarehouseId}
+                        onChange={handleWarehouseChange}
+                    >
+                        <option value="">Tất cả kho</option>
+                        {warehouses.map((warehouse) => (
+                            <option key={warehouse.id} value={warehouse.id}>
+                                {warehouse.ten_kho} ({warehouse.ma_kho})
+                            </option>
+                        ))}
+                    </select>
+                </div>
 
-                <select
-                    className="status-select"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}>
-                    <option value="">Tất cả trạng thái</option>
-                    <option value="0">Trống</option>
-                    <option value="1">Đang sử dụng</option>
-                </select>
+                {/* Tìm kiếm theo trạng thái */}
+                <div className="filter-group">
+                    <label>Lọc theo trạng thái:</label>
+                    <select
+                        className="status-select"
+                        value={statusFilter}
+                        onChange={handleStatusFilterChange}
+                    >
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="0">Trống</option>
+                        <option value="1">Đang sử dụng</option>
+                    </select>
+                </div>
 
                 {/* Nút thêm mới */}
-                <button className="btn-add" onClick={handleAddNew}>
-                    + Thêm vị trí kho
-                </button>
+                <div className="action-group">
+                    <button className="btn-add" onClick={handleAddNew}>
+                        + Thêm vị trí kho
+                    </button>
+                </div>
             </div>
+
+            {/* Hiển thị thông tin filter */}
+            {(selectedWarehouseId || statusFilter) && (
+                <div className="view-info">
+                    <strong>Đang xem: </strong>
+                    {selectedWarehouseId && (
+                        <>Kho: {warehouses.find(w => w.id === parseInt(selectedWarehouseId))?.ten_kho || selectedWarehouseId}</>
+                    )}
+                    {selectedWarehouseId && statusFilter && " | "}
+                    {statusFilter && (
+                        <>Trạng thái: {statusFilter === "0" ? "Trống" : "Đang sử dụng"}</>
+                    )}
+                    {" "}({filteredList.length} kết quả)
+                </div>
+            )}
 
             {/* Bảng danh sách vị trí kho */}
             <table className="table-container">
@@ -277,15 +414,20 @@ function WarehouseLocation() {
                             </div>
                             
                             <div className="form-group">
-                                <label>Kho ID:</label>
-                                <input
-                                    type="number"
+                                <label>Kho:</label>
+                                <select
                                     name="kho_id"
                                     value={formData.kho_id}
                                     onChange={handleInputChange}
-                                    min="0"
                                     required
-                                />
+                                >
+                                    <option value="">-- Chọn kho --</option>
+                                    {warehouses.map((warehouse) => (
+                                        <option key={warehouse.id} value={warehouse.id}>
+                                            {warehouse.ten_kho} ({warehouse.ma_kho})
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                             
                             <div className="form-group">

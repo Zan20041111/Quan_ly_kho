@@ -36,37 +36,46 @@ axiosInstance.interceptors.response.use(
 export const warehouseAPI = {
   // Lấy tất cả kho
   getAll: () => 
-    axiosInstance.get(`/get_all_warehouses`).then(response => response.data),
+    axiosInstance.get(`/warehouse/get_all_warehouses`).then(response => response.data),
   
   // Tạo kho mới
   create: (warehouseData) => 
-    axiosInstance.post(`/create_warehouse`, warehouseData).then(response => response.data),
+    axiosInstance.post(`/warehouse/create_warehouse`, warehouseData).then(response => response.data),
   
   // Cập nhật kho
   update: (id, warehouseData) =>
-    axiosInstance.put(`/update_warehouse/${id}`, warehouseData).then(response => response.data),
+    axiosInstance.put(`/warehouse/update_warehouse/${id}`, warehouseData).then(response => response.data),
   
   // Xóa kho
   delete: (id) =>
-    axiosInstance.delete(`/delete_warehouse/${id}`).then(response => response.data)
+    axiosInstance.delete(`/warehouse/delete_warehouse/${id}`).then(response => response.data)
 };
 
 export const warehouseLocationAPI = {
   // Lấy tất cả vị trí kho
   getAll: () =>
-    axiosInstance.get(`/get_all_warehouses_location`).then(response => response.data),
+    axiosInstance.get(`/warehouse-location/get_all_warehouses_location`).then(response => response.data),
+  
+  // Lấy vị trí kho theo ID kho
+  getByID: (warehouseId) =>
+    axiosInstance.get(`/warehouse-location/get_warehouse_location_byid/${warehouseId}`).then(response => response.data),
+  
+  // Tìm kiếm vị trí kho theo trạng thái
+  search: (keyword) =>
+    axiosInstance.get(`/warehouse-location/search_warehouse_location`, {
+      params: { keyword }
+    }).then(response => response.data),
   
   // Tạo vị trí kho mới
   create: (warehouseLocationData) =>
-    axiosInstance.post(`create_warehouse_location`,warehouseLocationData).then(response => response.data),
+    axiosInstance.post(`/warehouse-location/create_warehouse_location`,warehouseLocationData).then(response => response.data),
   
   // Cập nhật vị trí kho mới
   update: (id, warehouseLocationData) =>
-    axiosInstance.put(`/update_warehouse_location/${id}`,warehouseLocationData).then(response => response.data),
+    axiosInstance.put(`/warehouse-location/update_warehouse_location/${id}`,warehouseLocationData).then(response => response.data),
 
   // Xóa vị trí kho mới
   delete: (id) =>
-    axiosInstance.delete(`/delete_warehouse_location/${id}`).then(response => response.data)
+    axiosInstance.delete(`/warehouse-location/delete_warehouse_location/${id}`).then(response => response.data)
 };
-// Export mặc định cho các API khác nếu cần
 export default axiosInstance;

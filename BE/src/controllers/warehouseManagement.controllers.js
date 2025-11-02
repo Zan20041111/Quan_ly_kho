@@ -1,6 +1,6 @@
 import initModels from "../models/init-models.js";
 import sequelize from "../models/connect.js";
-import { where } from "sequelize";
+import { Op } from "sequelize";
 const models = initModels(sequelize);
 
 const getAllWarehouses = async(req,res) =>{
@@ -9,10 +9,32 @@ const getAllWarehouses = async(req,res) =>{
         return res.status(200).json(warehouse);
     } catch (error) {
         console.log("Lỗi khi lấy danh sách kho:",error);
-        return res.status(500).json({message:"Lỗi server khi lấy danh sách kho"});
+        return res.status(500).json({message: error.message});
     }
 }
 
+const searchWarehouse = async(req, res) =>{
+    try {
+        const { keyword } = req.query;
+        
+        if (!keyword || keyword.trim() === '') {
+            return res.status(400).json({message: "Vui lòng nhập từ khóa tìm kiếm!"});
+        }
+
+        const warehouse = await models.kho.findAll({
+            where: { ten_kho:{[Op.like]: `%${keyword}%`}
+            }
+        });
+        if (warehouse.length === 0) {
+            return res.status(404).json({
+                message: `Không tìm thấy kho hàng có tên chứa "${keyword}". Vui lòng nhập đúng tên kho!`
+            });
+        }
+        return res.status(200).json({message: "Tìm kiếm kho hàng thành công", data: warehouse});
+    } catch (error) {
+        return res.status(500).json({message: error.message});
+    }
+}
 const createWarehouse = async(req,res) => {
     try {
          // lâý dữ liệu từ  req body (client gửi JSON lên)
@@ -36,8 +58,7 @@ const createWarehouse = async(req,res) => {
          // trả về kết quả thành công và gửi kèm dữ diệu kho vừa tạo
         return res.status(201).json({message:"Tạo kho mới thành công.", data:newWarehouse})
     } catch (error) {
-        console.log(error);
-        return res.status(500).json({message:"Lỗi server khi thêm kho mới"});
+        return res.status(500).json({message: error.message});
     }
 }
 
@@ -47,7 +68,7 @@ const updateWarehouse = async (req, res) => {
     const { ma_kho, ten_kho, dia_chi, ghi_chu } = req.body;
     const checkID = await models.kho.findByPk(id);
     if (!checkID) {
-      return res.status(400).json({ message: "Kho này không tồn tại!" });
+      return res.status(404).json({ message: "Kho này không tồn tại!" });
     }
     const warehouse = await models.kho.update( // cập nhật dữ liệu
       { ma_kho, ten_kho, dia_chi, ghi_chu },
@@ -55,8 +76,7 @@ const updateWarehouse = async (req, res) => {
     );
     return res.status(200).json({message: "Cập nhật kho thành công.", data: warehouse});
   } catch (error) {
-    console.error("Lỗi khi cập nhật kho:", error);
-    return res.status(500).json({ message: "Lỗi server khi cập nhật kho" });
+    return res.status(500).json({ message: error.message});
   }
 };
 
@@ -66,7 +86,7 @@ const deleteWarehouse = async(req,res) =>{
         const {id} = req.params; 
         const warehouse = await models.kho.findByPk(id);
         if(!warehouse)
-            return res.status(400).json({message:"Kho không tồn tại!"});
+            return res.status(404).json({message:"Kho không tồn tại!"});
         
         const warehouseLocations = await models.vi_tri_kho.findAll({
             where: { kho_id: id }
@@ -80,12 +100,12 @@ const deleteWarehouse = async(req,res) =>{
         await warehouse.destroy();
         return res.status(200).json({message:"Xóa kho thành công"});
     } catch (error) {
-        console.log("Lỗi khi xóa kho", error);
-        return res.status(500).json({message:"Lỗi server khi xóa kho"});
+        return res.status(500).json({message: error.message});
     }
 }
 export {
     getAllWarehouses,
+    searchWarehouse,
     createWarehouse,
     updateWarehouse,
     deleteWarehouse
