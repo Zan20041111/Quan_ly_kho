@@ -45,7 +45,6 @@ const createAutoGoodsReceipt = async(req, res) =>{
         // Tạo mã phiếu mới với format PN001, PN002, ...
         const ma_phieu = `PN${String(nextNumber).padStart(3, '0')}`;
 
-        // Tạo phiếu nhập mới
         const newReceipt = await models.phieu_nhap.create({
             ma_phieu,
             kho_id: kho_id,
