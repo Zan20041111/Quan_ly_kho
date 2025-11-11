@@ -1,7 +1,16 @@
 import _sequelize from 'sequelize';
 const { Model, Sequelize } = _sequelize;
+import { toISOStringUTC7 } from '../utils/dateUtils.js';
 
 export default class phieu_nhap extends Model {
+  toJSON() {
+    const values = { ...this.get() };
+    if (values.ngay_nhap) {
+      values.ngay_nhap = toISOStringUTC7(values.ngay_nhap);
+    }
+    return values;
+  }
+
   static init(sequelize, DataTypes) {
   return super.init({
     id: {
@@ -34,6 +43,10 @@ export default class phieu_nhap extends Model {
         model: 'khach_hang',
         key: 'id'
       }
+    },
+    ghi_chu: {
+      type: DataTypes.TEXT,
+      allowNull: true
     }
   }, {
     sequelize,

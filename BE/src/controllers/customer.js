@@ -1,5 +1,5 @@
 import initModels from "../models/init-models.js";
-import sequelize from "../models/connect.js";
+import sequelize from "../config/connect.js";
 import { Op } from "sequelize";
 
 const models = initModels(sequelize);
@@ -16,11 +16,9 @@ const getAllCustomer = async (req, res) => {
 const searchCustomer = async (req, res) => {
     try {
         const { keyword } = req.query;
-
         if (!keyword || keyword.trim() === '') {
             return res.status(400).json({ message: "Vui lòng nhập từ khóa tìm kiếm!" });
         }
-
         const customers = await models.khach_hang.findAll({
             where: {
                 [Op.or]: [
@@ -34,7 +32,6 @@ const searchCustomer = async (req, res) => {
                 message: `Không tìm thấy tên khách hàng hoặc số điện thoại có chứa "${keyword}". Vui lòng nhập đúng tên khách hàng hoặc số điện thoại!`
             });
         }
-
         return res.status(200).json({ message: "Tìm kiếm khách hàng thành công", data: customers });
     } catch (error) {
         return res.status(500).json({ message: error.message });
