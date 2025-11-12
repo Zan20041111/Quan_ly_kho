@@ -1,7 +1,14 @@
 import _sequelize from 'sequelize';
 const { Model, Sequelize } = _sequelize;
-
+import { toISOStringUTC7 } from '../utils/dateUtils.js';
 export default class phieu_xuat extends Model {
+  toJSON() {
+    const values = { ...this.get() };
+    if (values.ngay_xuat) {
+      values.ngay_xuat = toISOStringUTC7(values.ngay_xuat);
+    }
+    return values;
+  }
   static init(sequelize, DataTypes) {
   return super.init({
     id: {

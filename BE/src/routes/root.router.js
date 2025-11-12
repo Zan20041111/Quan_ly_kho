@@ -4,10 +4,12 @@ import warehouseLocationRoutes from "./warehouseLocation.router.js";
 import customerRoutes from "./customer.router.js";
 import productRoutes from "./products.router.js";
 import goodsReceiptRoutes from "./goodsReceipt.router.js";
+import goodsIssueRoutes from "./goodsIssue.router.js";
 const rootRoutes = express.Router();
 rootRoutes.use("/warehouse",warehouseManagementRoutes);
 rootRoutes.use("/warehouse-location",warehouseLocationRoutes);
 rootRoutes.use("/customer",customerRoutes);
-rootRoutes.use("/product/",productRoutes);
-rootRoutes.use("/goods-receipt",goodsReceiptRoutes)
+rootRoutes.use("/product",productRoutes);
+rootRoutes.use("/goods-receipt",goodsReceiptRoutes);
+rootRoutes.use("/goods-issue",goodsIssueRoutes)
 export default rootRoutes;

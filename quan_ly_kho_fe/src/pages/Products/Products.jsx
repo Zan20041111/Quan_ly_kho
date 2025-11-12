@@ -1,50 +1,49 @@
 import { useState, useEffect, useCallback } from "react";
-import { customerAPI } from "../../utils/fetchFromAPI.js";
+import { productAPI } from "../../utils/fetchFromAPI.js";
+import "./Products.css";
 
-import './Customer.css'
-function Customers() {
-  const [customers, setCustomers] = useState([]);
+function Products() {
+  const [products, setProducts] = useState([]);
   const [filteredList, setFilteredList] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
-    ma_kh: "",
-    ten_kh: "",
-    sdt: "",
-    dia_chi: "",
-    email: ""
+    ma_sp: "",
+    ten_sp: "",
+    don_vi_tinh: "",
+    gia: "",
+    mo_ta: ""
   });
 
-  // Fetch tất cả khách hàng
-  const fetchCustomers = async () => {
+  // Fetch tất cả sản phẩm
+  const fetchProducts = async () => {
     setLoading(true);
     try {
-      const response = await customerAPI.getAll();
-      setCustomers(response.data || []);
-      setFilteredList(response.data || []);
+      const response = await productAPI.getAll();
+      const data = response.data || [];
+      setProducts(data);
+      setFilteredList(data);
     } catch (error) {
-      console.error("Lỗi khi lấy danh sách khách hàng:", error);
-      alert("Không thể tải dữ liệu khách hàng!");
+      alert("Không thể tải danh sách sản phẩm!");
     } finally {
       setLoading(false);
     }
   };
 
-  // Tìm kiếm server-side
+  // Tìm kiếm server-side (debounce 500ms)
   const performSearch = useCallback(async (keyword) => {
     if (!keyword.trim()) {
-      fetchCustomers();
+      fetchProducts();
       return;
     }
-
     setLoading(true);
     try {
-      const response = await customerAPI.search(keyword);
+      const response = await productAPI.search(keyword);
       setFilteredList(response.data || []);
     } catch (error) {
-      const msg = error.response?.data?.message || "Lỗi khi tìm kiếm!";
+      const msg = error.response?.data?.message || "Lỗi tìm kiếm!";
       alert(msg);
       setFilteredList([]);
     } finally {
@@ -52,18 +51,16 @@ function Customers() {
     }
   }, []);
 
-  // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
       performSearch(searchText);
     }, 500);
-
     return () => clearTimeout(timer);
   }, [searchText, performSearch]);
 
-  // Load dữ liệu lần đầu
+  // Load lần đầu
   useEffect(() => {
-    fetchCustomers();
+    fetchProducts();
   }, []);
 
   const handleInputChange = (e) => {
@@ -74,11 +71,11 @@ function Customers() {
   const handleAddNew = () => {
     setEditingItem(null);
     setFormData({
-      ma_kh: "",
-      ten_kh: "",
-      sdt: "",
-      dia_chi: "",
-      email: ""
+      ma_sp: "",
+      ten_sp: "",
+      don_vi_tinh: "",
+      gia: "",
+      mo_ta: ""
     });
     setShowForm(true);
   };
@@ -86,23 +83,23 @@ function Customers() {
   const handleEdit = (item) => {
     setEditingItem(item);
     setFormData({
-      ma_kh: item.ma_kh,
-      ten_kh: item.ten_kh,
-      sdt: item.sdt,
-      dia_chi: item.dia_chi,
-      email: item.email || ""
+      ma_sp: item.ma_sp,
+      ten_sp: item.ten_sp,
+      don_vi_tinh: item.don_vi_tinh,
+      gia: item.gia || "",
+      mo_ta: item.mo_ta || ""
     });
     setShowForm(true);
   };
 
-  const handleDelete = async (id, tenKh) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa khách hàng "${tenKh}" không?`)) {
+  const handleDelete = async (id, tenSp) => {
+    if (window.confirm(`Xóa sản phẩm "${tenSp}"?`)) {
       try {
-        await customerAPI.delete(id);
-        alert("Xóa khách hàng thành công!");
-        fetchCustomers();
+        await productAPI.delete(id);
+        alert("Xóa sản phẩm thành công!");
+        fetchProducts();
       } catch (error) {
-        const msg = error.response?.data?.message || "Lỗi khi xóa!";
+        const msg = error.response?.data?.message || "Không thể xóa (sản phẩm đang có trong kho)";
         alert(msg);
       }
     }
@@ -110,23 +107,24 @@ function Customers() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-if (!formData.ma_kh || !formData.ten_kh || !formData.sdt || !formData.dia_chi) {
-      alert("Vui lòng nhập đầy đủ các trường bắt buộc (*)");
+
+    if (!formData.ma_sp || !formData.ten_sp || !formData.don_vi_tinh) {
+      alert("Vui lòng nhập đầy đủ: Mã SP, Tên SP, Đơn vị tính!");
       return;
     }
 
     try {
       if (editingItem) {
-        await customerAPI.update(editingItem.id, formData);
-        alert("Cập nhật khách hàng thành công!");
+        await productAPI.update(editingItem.id, formData);
+        alert("Cập nhật sản phẩm thành công!");
       } else {
-        await customerAPI.create(formData);
-        alert("Thêm khách hàng thành công!");
+        await productAPI.create(formData);
+        alert("Thêm sản phẩm thành công!");
       }
       setShowForm(false);
-      fetchCustomers();
+      fetchProducts();
     } catch (error) {
-      const msg = error.response?.data?.message || "Lỗi khi lưu!";
+      const msg = error.response?.data?.message || "Lỗi khi lưu sản phẩm!";
       alert(msg);
     }
   };
@@ -138,36 +136,35 @@ if (!formData.ma_kh || !formData.ten_kh || !formData.sdt || !formData.dia_chi) {
 
   return (
     <div className="container">
-      <h1 className="title">Quản lý khách hàng</h1>
+      <h1 className="title">Quản lý sản phẩm</h1>
 
       <div className="filters">
         <input
           type="text"
           className="search-input"
-          placeholder="Tìm theo mã, tên hoặc số điện thoại..."
+          placeholder="Tìm theo tên sản phẩm..."
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           disabled={loading}
         />
         <button className="btn-add" onClick={handleAddNew} disabled={loading}>
-          + Thêm khách hàng
+          + Thêm sản phẩm
         </button>
       </div>
 
-      {/* Loading & Table */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "40px" }}>
-          <p>Đang tải dữ liệu...</p>
+          <p>Đang tải...</p>
         </div>
       ) : (
         <table className="table-container">
           <thead>
             <tr>
-              <th>Mã KH</th>
-              <th>Tên khách hàng</th>
-              <th>Số điện thoại</th>
-              <th>Địa chỉ</th>
-              <th>Email</th>
+              <th>Mã SP</th>
+              <th>Tên sản phẩm</th>
+              <th>Đơn vị</th>
+              <th>Giá</th>
+              <th>Mô tả</th>
               <th>Thao tác</th>
             </tr>
           </thead>
@@ -175,11 +172,11 @@ if (!formData.ma_kh || !formData.ten_kh || !formData.sdt || !formData.dia_chi) {
             {filteredList.length > 0 ? (
               filteredList.map((item) => (
                 <tr key={item.id}>
-                  <td>{item.ma_kh}</td>
-                  <td>{item.ten_kh}</td>
-                  <td>{item.sdt}</td>
-                  <td>{item.dia_chi}</td>
-                  <td>{item.email || "-"}</td>
+                  <td>{item.ma_sp}</td>
+                  <td>{item.ten_sp}</td>
+                  <td>{item.don_vi_tinh}</td>
+                  <td>{item.gia ? `${item.gia.toLocaleString()} đ` : "-"}</td>
+                  <td>{item.mo_ta || "-"}</td>
                   <td>
                     <div className="action-buttons">
                       <button className="btn-edit" onClick={() => handleEdit(item)}>
@@ -187,7 +184,7 @@ if (!formData.ma_kh || !formData.ten_kh || !formData.sdt || !formData.dia_chi) {
                       </button>
                       <button
                         className="btn-delete"
-                        onClick={() => handleDelete(item.id, item.ten_kh)}
+                        onClick={() => handleDelete(item.id, item.ten_sp)}
                       >
                         Xóa
                       </button>
@@ -198,7 +195,7 @@ if (!formData.ma_kh || !formData.ten_kh || !formData.sdt || !formData.dia_chi) {
             ) : (
               <tr>
                 <td colSpan="6" className="no-data">
-                  {searchText ? "Không tìm thấy khách hàng phù hợp" : "Chưa có dữ liệu khách hàng"}
+                  {searchText ? "Không tìm thấy sản phẩm" : "Chưa có sảnCable sản phẩm"}
                 </td>
               </tr>
             )}
@@ -208,66 +205,71 @@ if (!formData.ma_kh || !formData.ten_kh || !formData.sdt || !formData.dia_chi) {
 
       {/* Modal Form */}
       {showForm && (
-<div className="modal-overlay">
+        <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h2>{editingItem ? "Sửa khách hàng" : "Thêm khách hàng mới"}</h2>
+              <h2>{editingItem ? "Sửa sản phẩm" : "Thêm sản phẩm mới"}</h2>
               <button className="close-btn" onClick={handleCloseForm}>×</button>
             </div>
 
             <form onSubmit={handleSubmit} className="form-container">
               <div className="form-group">
-                <label>Mã khách hàng *</label>
+                <label>Mã sản phẩm *</label>
                 <input
                   type="text"
-                  name="ma_kh"
-                  value={formData.ma_kh}
+                  name="ma_sp"
+                  value={formData.ma_sp}
                   onChange={handleInputChange}
                   required
                   disabled={!!editingItem}
+                  placeholder="VD: SP001"
                 />
               </div>
 
               <div className="form-group">
-                <label>Tên khách hàng *</label>
+                <label>Tên sản phẩm *</label>
                 <input
                   type="text"
-                  name="ten_kh"
-                  value={formData.ten_kh}
+                  name="ten_sp"
+                  value={formData.ten_sp}
                   onChange={handleInputChange}
                   required
                 />
               </div>
 
               <div className="form-group">
-                <label>Số điện thoại *</label>
+                <label>Đơn vị tính *</label>
                 <input
                   type="text"
-                  name="sdt"
-                  value={formData.sdt}
+                  name="don_vi_tinh"
+                  value={formData.don_vi_tinh}
                   onChange={handleInputChange}
                   required
+                  placeholder="cái, thùng, kg..."
                 />
               </div>
 
               <div className="form-group">
-                <label>Địa chỉ *</label>
+                <label>Giá (VNĐ)</label>
                 <input
-                  type="text"
-                  name="dia_chi"
-                  value={formData.dia_chi}
+                  type="number"
+                  name="gia"
+                  value={formData.gia}
                   onChange={handleInputChange}
-                  required
+                  min="0"
+                  step="1000"
                 />
               </div>
 
               <div className="form-group">
-                <label>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
+                <label>Mô tả</label>
+                <textarea
+                  name="mo_ta"
+                  value={formData.mo_ta}
                   onChange={handleInputChange}
+                  rows="3"
+                  className="form-textarea"
+                  placeholder="Ghi chú về sản phẩm..."
                 />
               </div>
 
@@ -287,4 +289,4 @@ if (!formData.ma_kh || !formData.ten_kh || !formData.sdt || !formData.dia_chi) {
   );
 }
 
-export default Customers;
+export default Products;

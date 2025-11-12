@@ -68,11 +68,6 @@ const updateProduct = async(req, res) =>{
         const checkID = await models.san_pham.findByPk(id)
         if(!checkID)
             return res.status(404).json({message: "Sản phẩm này không tồn tại"})
-        const duplicateProductCode = await models.san_pham.findOne({
-            where: { ma_sp: ma_sp }
-        });
-        if (duplicateProductCode)
-            return res.status(400).json({ message: "Mã sản phẩm này đã tồn tại" });
         const duplicateProductNameAndUnit = await models.san_pham.findOne({
             where: {
                 ten_sp: ten_sp,

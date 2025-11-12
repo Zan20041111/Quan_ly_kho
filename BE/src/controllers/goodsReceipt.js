@@ -3,24 +3,34 @@ import sequelize from "../config/connect.js";
 import { Op} from "sequelize";
 
 const models = initModels(sequelize);
-const getAllGoodsReceipt = async(req, res) =>{
-    try {
-        const goodsReceipt = await models.phieu_nhap.findAll();
-        return res.status(200).json({message: "Lấy danh sách phiếu nhập thành công", data: goodsReceipt});
-    } catch (error) {
-        return res.status(500).json({message: error.message});
-    }
-}
+const getAllGoodsReceipt = async (req, res) => {
+  try {
+    const goodsReceipt = await models.phieu_nhap.findAll({
+      include: [
+        { model: models.kho, as: "kho", attributes: ["id", "ten_kho"] },
+        { model: models.khach_hang, as: "khach_hang", attributes: ["id", "ten_kh"] }
+      ],
+      order: [['id', 'DESC']]
+    });
+    return res.status(200).json({message: "Lấy danh sách phiếu nhập thành công", data: goodsReceipt});
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
 const createAutoGoodsReceipt = async (req, res) => {
     try {
-        const { kho_id, khach_hang_id, ghi_chu } = req.body;
+        const { kho_id, khach_hang_id, ghi_chu, ngay_nhap } = req.body;
+
+        if (!kho_id || !khach_hang_id) {
+            return res.status(400).json({ message: "Vui lòng cung cấp kho_id và khach_hang_id" });
+        }
 
         const lastReceipt = await models.phieu_nhap.findOne({
             where: {
                 ma_phieu: { [Op.like]: 'PN%' }
             },
-            order: [['ma_phieu', 'DESC']], // sắp xếp mã giảm dần
+            order: [['ma_phieu', 'DESC']],
             attributes: ['ma_phieu']
         });
         let nextNumber = 1;
@@ -31,12 +41,15 @@ const createAutoGoodsReceipt = async (req, res) => {
 
         const ma_phieu = `PN${String(nextNumber).padStart(3, '0')}`;
 
+        // Sử dụng ngay_nhap từ request body nếu có, nếu không thì dùng ngày hiện tại
+        const ngayNhapValue = ngay_nhap ? new Date(ngay_nhap) : new Date();
+
         const newReceipt = await models.phieu_nhap.create({
             ma_phieu,
             kho_id,
             khach_hang_id,
             ghi_chu: ghi_chu || null,
-            ngay_nhap: new Date()
+            ngay_nhap: ngayNhapValue
         });
         return res.status(201).json({message: "Tạo phiếu nhập thành công", data: newReceipt});
     } catch (error) {
@@ -59,6 +72,13 @@ const addMultipleProducts = async (req, res) => {
         for (const p of products) {
             const { san_pham_id, so_luong, vi_tri_id } = p;
 
+            const soLuongNum = parseInt(so_luong, 10);
+            if (!san_pham_id || !vi_tri_id || isNaN(soLuongNum) || soLuongNum <= 0) {
+                return res.status(400).json({
+                    message: `Dữ liệu sản phẩm không hợp lệ (san_pham_id: ${san_pham_id}, so_luong: ${so_luong}, vi_tri_id: ${vi_tri_id})`
+                });
+            }
+
             const product = await models.san_pham.findByPk(san_pham_id);
             const location = await models.vi_tri_kho.findByPk(vi_tri_id);
             if (!product || !location) {
@@ -77,7 +97,10 @@ const addMultipleProducts = async (req, res) => {
                 });
             }
             const newDetail = await models.chi_tiet_nhap.create({
-                phieu_nhap_id, san_pham_id, so_luong, vi_tri_id
+                phieu_nhap_id, 
+                san_pham_id, 
+                so_luong: soLuongNum, 
+                vi_tri_id
             });
             await models.vi_tri_kho.update({ trang_thai: 1 }, { where: { id: vi_tri_id } });
             results.push(newDetail);
@@ -103,20 +126,24 @@ const getDetailGoodsReceiptByID = async (req, res) => {
                         {
                             model: models.san_pham,
                             as: "san_pham",
+                            attributes: ["id", "ten_sp", "don_vi_tinh", "ma_sp"]
                         },
                         {
                             model: models.vi_tri_kho,
                             as: "vi_tri",
+                            attributes: ["id", "ma_vi_tri", "ten_vi_tri"]
                         },
                     ],
                 },
                 {
                     model: models.khach_hang,
                     as: "khach_hang",
+                    attributes: ["id", "ten_kh", "ma_kh"]
                 },
                 {
                     model: models.kho,
                     as: "kho",
+                    attributes: ["id", "ten_kho", "ma_kho"]
                 },
             ],
         });
@@ -156,9 +183,9 @@ const searchGoodsReceipt = async (req, res) => {
             }
             // Tạo đối tượng Date
             const date = new Date(`${year}-${month}-${day}`);
-            if (!isNaN(date)) {
-                const startOfDay = new Date(date.setHours(0, 0, 0, 0));
-                const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+            if (!isNaN(date.getTime())) {
+                const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+                const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
                 searchCondition = { ngay_nhap: { [Op.between]: [startOfDay, endOfDay] } };
             }
         } 
@@ -167,18 +194,31 @@ const searchGoodsReceipt = async (req, res) => {
                 message: "Từ khóa không hợp lệ, vui lòng nhập mã phiếu, ID kho hoặc ngày, tháng, năm hợp lệ!" 
             });
         }
-        const goodsReceipt = await models.phieu_nhap.findAll({ where: searchCondition });
+        const goodsReceipt = await models.phieu_nhap.findAll({ 
+            where: searchCondition,
+            include: [
+                { model: models.kho, as: "kho", attributes: ["id", "ten_kho"] },
+                { model: models.khach_hang, as: "khach_hang", attributes: ["id", "ten_kh"] }
+            ],
+            order: [['id', 'DESC']] 
+        });
         if (goodsReceipt.length === 0) {
             return res.status(404).json({message: `Không tìm thấy phiếu nhập có chứa "${keyword}".`});
         }
+        
         return res.status(200).json({message: "Tìm kiếm phiếu nhập thành công", data: goodsReceipt});
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
 };
 
-
-
+const updateGoodsReceipt = async(req, res) =>{
+    try {
+        
+    } catch (error) {
+        
+    }
+}
 
 export { 
     getAllGoodsReceipt,

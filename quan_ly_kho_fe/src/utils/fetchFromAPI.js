@@ -78,4 +78,71 @@ export const warehouseLocationAPI = {
   delete: (id) =>
     axiosInstance.delete(`/warehouse-location/delete_warehouse_location/${id}`).then(response => response.data)
 };
+export const customerAPI = {
+  // Lấy tất cả khách hàng
+  getAll: () =>
+    axiosInstance.get(`/customer/get_all_customer`).then(res => res.data),
+
+  // Tìm kiếm khách hàng theo keyword (tên hoặc sdt)
+  search: (keyword) =>
+    axiosInstance.get(`/customer/search_customer`, {
+      params: { keyword }
+    }).then(res => res.data),
+
+  // Tạo khách hàng mới
+  create: (customerData) =>
+    axiosInstance.post(`/customer/create_customer`, customerData).then(res => res.data),
+
+  // Cập nhật khách hàng theo ID
+  update: (id, customerData) =>
+    axiosInstance.put(`/customer/update_customer/${id}`, customerData).then(res => res.data),
+
+  // Xóa khách hàng theo ID
+  delete: (id) =>
+    axiosInstance.delete(`/customer/delete_customer/${id}`).then(res => res.data)
+};
+export const productAPI = {
+  // Lấy tất cả sản phẩm
+  getAll: () =>
+    axiosInstance.get(`/product/get_all_products`).then(res => res.data),
+
+  // Tìm kiếm sản phẩm theo tên
+  search: (keyword) =>
+    axiosInstance.get(`/product/search_product`, {
+      params: { keyword }
+    }).then(res => res.data),
+
+  // Tạo sản phẩm mới
+  create: (productData) =>
+    axiosInstance.post(`/product/create_product`, productData).then(res => res.data),
+
+  // Cập nhật sản phẩm theo ID
+  update: (id, productData) =>
+    axiosInstance.put(`/product/update_product/${id}`, productData).then(res => res.data),
+
+  // Xóa sản phẩm theo ID
+  delete: (id) =>
+    axiosInstance.delete(`/product/delete_product/${id}`).then(res => res.data)
+};
+export const goodsReceiptAPI = {
+  // Lấy tất cả phiếu nhập
+  getAll: () =>
+    axiosInstance.get(`/goods-receipt/get_all_goodsreceipt`).then(res => res.data),
+
+  // Tạo phiếu nhập tự động (PN001, PN002...)
+  create: (data) =>
+    axiosInstance.post(`/goods-receipt/create_goodsreceipt`, data).then(res => res.data),
+
+  // Thêm nhiều sản phẩm vào phiếu
+  addProducts: (data) =>
+    axiosInstance.post(`/goods-receipt/add_many_product`, data).then(res => res.data),
+
+  // Lấy chi tiết phiếu nhập theo ID
+  getDetail: (id) =>
+    axiosInstance.get(`/goods-receipt/get_detail_goodsreceipt_byid/${id}`).then(res => res.data),
+
+  // Tìm kiếm phiếu nhập theo mã, kho, ngày
+  search: (keyword) =>
+    axiosInstance.get(`/goods-receipt/search_goodsreceipt`, { params: { keyword } }).then(res => res.data)
+};
 export default axiosInstance;
