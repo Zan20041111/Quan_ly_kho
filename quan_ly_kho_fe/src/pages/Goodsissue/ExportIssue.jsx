@@ -4,18 +4,27 @@ import {
   warehouseAPI,
   customerAPI,
   productAPI,
-  warehouseLocationAPI
+  warehouseLocationAPI,
+  reportsAPI
 } from "../../utils/fetchFromAPI.js";
 import "./ExportIssue.css";
 
 const formatDate = (date) => {
   if (!date) return "";
   try {
+    // Nếu đã là string dạng YYYY-MM-DD thì trả về luôn
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date)) {
+      return date.split('T')[0];
+    }
     const dateObj = new Date(date);
     if (isNaN(dateObj.getTime())) {
       return "";
     }
-    return dateObj.toISOString().split("T")[0];
+    // Format thành YYYY-MM-DD
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   } catch (error) {
     console.error("Error formatting date:", error, date);
     return "";
@@ -33,7 +42,7 @@ function ExportIssue() {
   const [allLocations, setAllLocations] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState(null);
-  const [inventoryData, setInventoryData] = useState({}); // Lưu tồn kho: { "san_pham_id-vi_tri_id": tonKho }
+  const [inventoryData, setInventoryData] = useState({}); // Lưu danh sách vị trí có hàng: { "san_pham_id-kho_id": [{ id, ma_vi_tri, so_luong_ton }] }
 
   // Form state
   const [formData, setFormData] = useState({
@@ -96,38 +105,59 @@ function ExportIssue() {
     return () => clearTimeout(timer);
   }, [searchText, performSearch]);
 
-  // Tính tồn kho cho sản phẩm tại vị trí
-  const calculateInventory = async (san_pham_id, vi_tri_id) => {
-    if (!san_pham_id || !vi_tri_id) return 0;
+  // Lấy danh sách vị trí có tồn kho cho sản phẩm đã chọn
+  const loadAvailableLocations = async (san_pham_id, kho_id) => {
+    if (!san_pham_id || !kho_id) {
+      return [];
+    }
+
+    const cacheKey = `${san_pham_id}-${kho_id}`;
     
-    const key = `${san_pham_id}-${vi_tri_id}`;
-    if (inventoryData[key] !== undefined) {
-      return inventoryData[key];
+    // Kiểm tra cache
+    if (inventoryData[cacheKey]) {
+      return inventoryData[cacheKey];
     }
 
     try {
-      // Gọi API để tính tồn kho (nếu có) hoặc tính từ chi_tiet_nhap và chi_tiet_xuat
-      // Tạm thời return 0, sẽ được tính ở backend khi submit
-      return 0;
+      // Gọi API để lấy chi tiết tồn kho theo vị trí
+      const params = { kho_id: kho_id };
+      const res = await reportsAPI.getInventoryDetailByProduct(san_pham_id, params);
+      const chiTiet = res.data?.chi_tiet || [];
+      
+      // Lọc chỉ lấy các vị trí có tồn kho > 0
+      const availableLocations = chiTiet
+        .filter(item => item.so_luong_ton > 0)
+        .map(item => ({
+          id: item.vi_tri_id,
+          ma_vi_tri: item.ma_vi_tri,
+          ten_vi_tri: item.ten_vi_tri,
+          kho_id: item.kho_id,
+          so_luong_ton: item.so_luong_ton
+        }));
+
+      // Lưu vào cache
+      setInventoryData(prev => ({
+        ...prev,
+        [cacheKey]: availableLocations
+      }));
+
+      return availableLocations;
     } catch (error) {
-      return 0;
+      console.error("Lỗi khi tải vị trí có hàng:", error);
+      return [];
     }
   };
 
-  // Lọc vị trí có hàng (có tồn kho > 0) cho sản phẩm đã chọn
+  // Lấy danh sách vị trí có hàng từ cache
   const getAvailableLocations = (san_pham_id, kho_id) => {
     if (!san_pham_id || !kho_id) return [];
     
-    // Lọc vị trí thuộc kho và có trang_thai = 1 (đang sử dụng)
-    return allLocations.filter(l => {
-      const sameWarehouse = l.kho_id === Number(kho_id) || l.kho_id === kho_id;
-      const inUse = l.trang_thai === 1;
-      return sameWarehouse && inUse;
-    });
+    const cacheKey = `${san_pham_id}-${kho_id}`;
+    return inventoryData[cacheKey] || [];
   };
 
   // Form handlers
-  const handleInputChange = (e) => {
+  const handleInputChange = async (e) => {
     const { name, value } = e.target;
     setFormData(prev => {
       const newFormData = { ...prev, [name]: value };
@@ -136,6 +166,17 @@ function ExportIssue() {
           ...d,
           vi_tri_id: "" // Reset vị trí khi đổi kho
         }));
+        // Xóa cache khi đổi kho
+        setInventoryData({});
+        
+        // Load lại danh sách vị trí có hàng cho các sản phẩm đã chọn
+        if (value) {
+          prev.details.forEach(d => {
+            if (d.san_pham_id) {
+              loadAvailableLocations(d.san_pham_id, value);
+            }
+          });
+        }
       }
       return newFormData;
     });
@@ -160,14 +201,19 @@ function ExportIssue() {
     }));
   };
 
-  const updateDetail = (index, field, value) => {
+  const updateDetail = async (index, field, value) => {
     setFormData(prev => {
       const newDetails = [...prev.details];
       newDetails[index][field] = value;
       
-      // Nếu thay đổi sản phẩm hoặc vị trí, reset vị trí
+      // Nếu thay đổi sản phẩm, reset vị trí và load lại danh sách vị trí có hàng
       if (field === "san_pham_id") {
         newDetails[index].vi_tri_id = "";
+        
+        // Load danh sách vị trí có hàng cho sản phẩm mới
+        if (value && prev.kho_id) {
+          loadAvailableLocations(value, prev.kho_id);
+        }
       }
       
       return { ...prev, details: newDetails };
@@ -405,7 +451,9 @@ function ExportIssue() {
                               {availableLocations
                                 .filter(l => !formData.details.some((dd, j) => j !== i && dd.vi_tri_id === l.id && dd.san_pham_id === d.san_pham_id))
                                 .map(l => (
-                                  <option key={l.id} value={l.id}>{l.ma_vi_tri}</option>
+                                  <option key={l.id} value={l.id}>
+                                    {l.ma_vi_tri} {l.so_luong_ton !== undefined ? `(tồn: ${l.so_luong_ton})` : ""}
+                                  </option>
                                 ))}
                             </select>
                           </td>

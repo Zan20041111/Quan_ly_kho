@@ -166,4 +166,19 @@ export const goodsIssueAPI = {
   search: (keyword) =>
     axiosInstance.get(`/goods-issue/search_goodsissue`, { params: { keyword } }).then(res => res.data),
 };
+
+export const reportsAPI = {
+  // Báo cáo tồn kho theo sản phẩm
+  getInventoryByProduct: (params) =>
+    axiosInstance.get(`/reports/inventory/by-product`, { params }).then(res => res.data),
+
+  // Chi tiết tồn kho theo vị trí cho một sản phẩm
+  getInventoryDetailByProduct: (productId, params) =>
+    axiosInstance.get(`/reports/inventory/detail/${productId}`, { params }).then(res => res.data),
+
+  // Báo cáo tồn kho theo kho
+  getInventoryByWarehouse: (warehouseId) =>
+    axiosInstance.get(`/reports/inventory/by-warehouse/${warehouseId}`).then(res => res.data),
+};
+
 export default axiosInstance;

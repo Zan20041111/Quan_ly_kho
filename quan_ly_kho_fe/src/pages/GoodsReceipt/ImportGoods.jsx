@@ -7,12 +7,19 @@ const formatCurrency = (value) => (value ? `${Number(value).toLocaleString("vi-V
 const formatDate = (date) => {
   if (!date) return "";
   try {
+    // Nếu đã là string dạng YYYY-MM-DD thì trả về luôn
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date)) {
+      return date.split('T')[0];
+    }
     const dateObj = new Date(date);
-    // Kiểm tra date hợp lệ
     if (isNaN(dateObj.getTime())) {
       return "";
     }
-    return dateObj.toISOString().split("T")[0];
+    // Format thành YYYY-MM-DD
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   } catch (error) {
     console.error("Error formatting date:", error, date);
     return "";

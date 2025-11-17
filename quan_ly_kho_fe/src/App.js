@@ -8,6 +8,7 @@ import Customers from "./pages/Customers/Customers.jsx";
 import Products from "./pages/Products/Products.jsx";
 import ImportGoods from "./pages/GoodsReceipt/ImportGoods.jsx";
 import ExportIssue from "./pages/Goodsissue/ExportIssue.jsx";
+import InventoryReport from "./pages/Reports/InventoryReport.jsx";
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -60,7 +61,7 @@ function App() {
             <Route path="/products" element={<Products/>} />
             <Route path="/imports" element={<ImportGoods/>} />
             <Route path="/exports" element={<ExportIssue/>} />
-            <Route path="/reports" element={<div>Báo cáo tồn kho</div>} />
+            <Route path="/reports" element={<InventoryReport/>} />
             <Route path="/settings" element={<div>Cài đặt</div>} />
           </Routes>
         </main>
