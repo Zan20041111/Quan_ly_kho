@@ -1,6 +1,7 @@
 import initModels from "../models/init-models.js";
 import sequelize from "../config/connect.js";
 import { Op} from "sequelize";
+import { parseDateUTC7 } from "../utils/dateUtils.js";
 
 const models = initModels(sequelize);
 const getAllGoodsReceipt = async (req, res) => {
@@ -42,7 +43,8 @@ const createAutoGoodsReceipt = async (req, res) => {
         const ma_phieu = `PN${String(nextNumber).padStart(3, '0')}`;
 
         // Sử dụng ngay_nhap từ request body nếu có, nếu không thì dùng ngày hiện tại
-        const ngayNhapValue = ngay_nhap ? new Date(ngay_nhap) : new Date();
+        // Sử dụng parseDateUTC7 để xử lý đúng timezone UTC+7
+        const ngayNhapValue = ngay_nhap ? parseDateUTC7(ngay_nhap) : new Date();
 
         const newReceipt = await models.phieu_nhap.create({
             ma_phieu,
@@ -74,27 +76,18 @@ const addMultipleProducts = async (req, res) => {
 
             const soLuongNum = parseInt(so_luong, 10);
             if (!san_pham_id || !vi_tri_id || isNaN(soLuongNum) || soLuongNum <= 0) {
-                return res.status(400).json({
-                    message: `Dữ liệu sản phẩm không hợp lệ (san_pham_id: ${san_pham_id}, so_luong: ${so_luong}, vi_tri_id: ${vi_tri_id})`
-                });
+                return res.status(400).json({message: `Dữ liệu sản phẩm không hợp lệ (san_pham_id: ${san_pham_id}, so_luong: ${so_luong}, vi_tri_id: ${vi_tri_id})`});
             }
-
             const product = await models.san_pham.findByPk(san_pham_id);
             const location = await models.vi_tri_kho.findByPk(vi_tri_id);
             if (!product || !location) {
-                return res.status(400).json({
-                    message: `Sản phẩm hoặc vị trí không tồn tại (san_pham_id: ${san_pham_id}, vi_tri_id: ${vi_tri_id})`
-                });
+                return res.status(400).json({message: `Sản phẩm hoặc vị trí không tồn tại (san_pham_id: ${san_pham_id}, vi_tri_id: ${vi_tri_id})`});
             }
             if (location.kho_id !== receipt.kho_id) {
-                return res.status(400).json({
-                    message: `Vị trí ${vi_tri_id} không thuộc cùng kho với phiếu nhập`
-                });
+                return res.status(400).json({message: `Vị trí ${vi_tri_id} không thuộc cùng kho với phiếu nhập`});
             }
             if (location.trang_thai !== 0) {
-                return res.status(400).json({
-                    message: `Vị trí ${vi_tri_id} đang được sử dụng, không thể thêm sản phẩm vào`
-                });
+                return res.status(400).json({message: `Vị trí ${vi_tri_id} đang được sử dụng, không thể thêm sản phẩm vào`});
             }
             const newDetail = await models.chi_tiet_nhap.create({
                 phieu_nhap_id, 
@@ -190,9 +183,7 @@ const searchGoodsReceipt = async (req, res) => {
             }
         } 
         else {
-            return res.status(400).json({ 
-                message: "Từ khóa không hợp lệ, vui lòng nhập mã phiếu, ID kho hoặc ngày, tháng, năm hợp lệ!" 
-            });
+            return res.status(400).json({ message: "Từ khóa không hợp lệ, vui lòng nhập mã phiếu, ID kho hoặc ngày, tháng, năm hợp lệ!" });
         }
         const goodsReceipt = await models.phieu_nhap.findAll({ 
             where: searchCondition,
@@ -205,20 +196,11 @@ const searchGoodsReceipt = async (req, res) => {
         if (goodsReceipt.length === 0) {
             return res.status(404).json({message: `Không tìm thấy phiếu nhập có chứa "${keyword}".`});
         }
-        
         return res.status(200).json({message: "Tìm kiếm phiếu nhập thành công", data: goodsReceipt});
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
 };
-
-const updateGoodsReceipt = async(req, res) =>{
-    try {
-        
-    } catch (error) {
-        
-    }
-}
 
 export { 
     getAllGoodsReceipt,

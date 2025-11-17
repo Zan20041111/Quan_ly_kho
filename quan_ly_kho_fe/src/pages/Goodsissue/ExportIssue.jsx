@@ -1,14 +1,17 @@
-// src/components/ImportGoods.jsx
 import { useState, useEffect, useCallback } from "react";
-import { goodsReceiptAPI, warehouseAPI, customerAPI, productAPI, warehouseLocationAPI } from "../../utils/fetchFromAPI.js";
-import "./ImportGoods.css";
+import {
+  goodsIssueAPI,
+  warehouseAPI,
+  customerAPI,
+  productAPI,
+  warehouseLocationAPI
+} from "../../utils/fetchFromAPI.js";
+import "./ExportIssue.css";
 
-const formatCurrency = (value) => (value ? `${Number(value).toLocaleString("vi-VN")} đ` : "-");
 const formatDate = (date) => {
   if (!date) return "";
   try {
     const dateObj = new Date(date);
-    // Kiểm tra date hợp lệ
     if (isNaN(dateObj.getTime())) {
       return "";
     }
@@ -19,24 +22,25 @@ const formatDate = (date) => {
   }
 };
 
-function ImportGoods() {
-  const [receipts, setReceipts] = useState([]);
-  const [filteredReceipts, setFilteredReceipts] = useState([]);
+function ExportIssue() {
+  const [issues, setIssues] = useState([]);
+  const [filteredIssues, setFilteredIssues] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [loading, setLoading] = useState(false);
   const [warehouses, setWarehouses] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
-  const [allLocations, setAllLocations] = useState([]); // Tất cả vị trí
+  const [allLocations, setAllLocations] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [selectedIssue, setSelectedIssue] = useState(null);
+  const [inventoryData, setInventoryData] = useState({}); // Lưu tồn kho: { "san_pham_id-vi_tri_id": tonKho }
 
   // Form state
   const [formData, setFormData] = useState({
     kho_id: "",
     khach_hang_id: "",
     ghi_chu: "",
-    ngay_nhap: formatDate(new Date()),
+    ngay_xuat: formatDate(new Date()),
     details: [] // { san_pham_id, so_luong, vi_tri_id }
   });
 
@@ -44,22 +48,20 @@ function ImportGoods() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [whRes, custRes, prodRes, locRes, receiptRes] = await Promise.all([
+      const [whRes, custRes, prodRes, locRes, issueRes] = await Promise.all([
         warehouseAPI.getAll(),
         customerAPI.getAll(),
         productAPI.getAll(),
         warehouseLocationAPI.getAll(),
-        goodsReceiptAPI.getAll()
+        goodsIssueAPI.getAll()
       ]);
-      // Backend getAllWarehouses và getAllWarehousesLocation trả về mảng trực tiếp
       setWarehouses(Array.isArray(whRes) ? whRes : (whRes?.data || []));
       setCustomers(custRes.data || []);
       setProducts(prodRes.data || []);
-      // Backend getAllWarehousesLocation trả về mảng trực tiếp, không có wrapper {data: ...}
       const allLocs = Array.isArray(locRes) ? locRes : (locRes?.data || []);
-      setAllLocations(allLocs.filter(l => l.trang_thai === 0));
-      setReceipts(receiptRes.data || []);
-      setFilteredReceipts(receiptRes.data || []);
+      setAllLocations(allLocs);
+      setIssues(issueRes.data || []);
+      setFilteredIssues(issueRes.data || []);
     } catch (error) {
       alert("Lỗi khi tải dữ liệu!");
     } finally {
@@ -74,32 +76,61 @@ function ImportGoods() {
   // Tìm kiếm server-side
   const performSearch = useCallback(async (keyword) => {
     if (!keyword.trim()) {
-      setFilteredReceipts(receipts);
+      setFilteredIssues(issues);
       return;
     }
     setLoading(true);
     try {
-      const res = await goodsReceiptAPI.search(keyword);
-      setFilteredReceipts(res.data || []);
+      const res = await goodsIssueAPI.search(keyword);
+      setFilteredIssues(res.data || []);
     } catch (error) {
       alert(error.response?.data?.message || "Lỗi tìm kiếm!");
-      setFilteredReceipts([]);
+      setFilteredIssues([]);
     } finally {
       setLoading(false);
     }
-  }, [receipts]);
+  }, [issues]);
 
   useEffect(() => {
     const timer = setTimeout(() => performSearch(searchText), 500);
     return () => clearTimeout(timer);
   }, [searchText, performSearch]);
 
+  // Tính tồn kho cho sản phẩm tại vị trí
+  const calculateInventory = async (san_pham_id, vi_tri_id) => {
+    if (!san_pham_id || !vi_tri_id) return 0;
+    
+    const key = `${san_pham_id}-${vi_tri_id}`;
+    if (inventoryData[key] !== undefined) {
+      return inventoryData[key];
+    }
+
+    try {
+      // Gọi API để tính tồn kho (nếu có) hoặc tính từ chi_tiet_nhap và chi_tiet_xuat
+      // Tạm thời return 0, sẽ được tính ở backend khi submit
+      return 0;
+    } catch (error) {
+      return 0;
+    }
+  };
+
+  // Lọc vị trí có hàng (có tồn kho > 0) cho sản phẩm đã chọn
+  const getAvailableLocations = (san_pham_id, kho_id) => {
+    if (!san_pham_id || !kho_id) return [];
+    
+    // Lọc vị trí thuộc kho và có trang_thai = 1 (đang sử dụng)
+    return allLocations.filter(l => {
+      const sameWarehouse = l.kho_id === Number(kho_id) || l.kho_id === kho_id;
+      const inUse = l.trang_thai === 1;
+      return sameWarehouse && inUse;
+    });
+  };
+
   // Form handlers
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => {
       const newFormData = { ...prev, [name]: value };
-      // Nếu thay đổi kho, reset các vị trí đã chọn vì có thể không còn hợp lệ
       if (name === "kho_id") {
         newFormData.details = prev.details.map(d => ({
           ...d,
@@ -110,20 +141,16 @@ function ImportGoods() {
     });
   };
 
-  // Lọc vị trí theo kho đã chọn
-  const filteredLocations = formData.kho_id 
-    ? allLocations.filter(l => l.kho_id === Number(formData.kho_id) || l.kho_id === formData.kho_id)
-    : [];
-
-  // Reset form về trạng thái ban đầu
+  // Reset form
   const resetForm = () => {
     setFormData({
       kho_id: "",
       khach_hang_id: "",
       ghi_chu: "",
-      ngay_nhap: formatDate(new Date()),
+      ngay_xuat: formatDate(new Date()),
       details: []
     });
+    setInventoryData({});
   };
 
   const addProductRow = () => {
@@ -137,6 +164,12 @@ function ImportGoods() {
     setFormData(prev => {
       const newDetails = [...prev.details];
       newDetails[index][field] = value;
+      
+      // Nếu thay đổi sản phẩm hoặc vị trí, reset vị trí
+      if (field === "san_pham_id") {
+        newDetails[index].vi_tri_id = "";
+      }
+      
       return { ...prev, details: newDetails };
     });
   };
@@ -165,52 +198,50 @@ function ImportGoods() {
     }
 
     try {
-      // Bước 1: Tạo phiếu
-      const receiptRes = await goodsReceiptAPI.create({
+      // Bước 1: Tạo phiếu xuất
+      const issueRes = await goodsIssueAPI.create({
         kho_id: formData.kho_id,
         khach_hang_id: formData.khach_hang_id,
         ghi_chu: formData.ghi_chu || null,
-        ngay_nhap: formData.ngay_nhap
+        ngay_xuat: formData.ngay_xuat
       });
 
-      const phieu_nhap_id = receiptRes.data.id;
+      const phieu_xuat_id = issueRes.data.id;
 
-      // Bước 2: Thêm sản phẩm
-      const productsPayload = formData.details.map(d => ({
-        san_pham_id: d.san_pham_id,
-        so_luong: d.so_luong,
-        vi_tri_id: d.vi_tri_id
-      }));
+      // Bước 2: Thêm từng sản phẩm vào phiếu (API addProduct thêm từng sản phẩm)
+      for (const d of formData.details) {
+        await goodsIssueAPI.addProduct({
+          phieu_xuat_id,
+          san_pham_id: d.san_pham_id,
+          so_luong: d.so_luong,
+          vi_tri_id: d.vi_tri_id
+        });
+      }
 
-      await goodsReceiptAPI.addProducts({
-        phieu_nhap_id,
-        products: productsPayload
-      });
-
-      alert("Nhập kho thành công!");
+      alert("Xuất kho thành công!");
       resetForm();
       setShowForm(false);
       fetchData();
     } catch (error) {
-      const msg = error.response?.data?.message || "Lỗi khi nhập kho!";
+      const msg = error.response?.data?.message || "Lỗi khi xuất kho!";
       alert(msg);
     }
   };
 
   const viewDetail = async (id) => {
     try {
-      const res = await goodsReceiptAPI.getDetail(id);
-      setSelectedReceipt(res.data);
+      const res = await goodsIssueAPI.getDetail(id);
+      setSelectedIssue(res.data);
     } catch (error) {
       alert("Lỗi khi xem chi tiết!");
     }
   };
 
-  const closeDetail = () => setSelectedReceipt(null);
+  const closeDetail = () => setSelectedIssue(null);
 
   return (
     <div className="container">
-      <h1 className="title">Nhập kho</h1>
+      <h1 className="title">Xuất kho</h1>
 
       <div className="filters">
         <input
@@ -225,7 +256,7 @@ function ImportGoods() {
           resetForm();
           setShowForm(true);
         }} disabled={loading}>
-          + Tạo phiếu nhập
+          + Tạo phiếu xuất
         </button>
       </div>
 
@@ -237,29 +268,29 @@ function ImportGoods() {
           <thead>
             <tr>
               <th>Mã phiếu</th>
-              <th>Ngày nhập</th>
+              <th>Ngày xuất</th>
               <th>Kho</th>
               <th>Khách hàng</th>
               <th>Thao tác</th>
             </tr>
           </thead>
           <tbody>
-            {filteredReceipts.length > 0 ? (
-              filteredReceipts.map(r => (
-                <tr key={r.id}>
-                  <td>{r.ma_phieu}</td>
-                  <td>{formatDate(r.ngay_nhap)}</td>
-                  <td>{r.kho?.ten_kho || "-"}</td>
-                  <td>{r.khach_hang?.ten_kh || "-"}</td>
+            {filteredIssues.length > 0 ? (
+              filteredIssues.map(i => (
+                <tr key={i.id}>
+                  <td>{i.ma_phieu}</td>
+                  <td>{formatDate(i.ngay_xuat)}</td>
+                  <td>{i.kho?.ten_kho || "-"}</td>
+                  <td>{i.khach_hang?.ten_kh || "-"}</td>
                   <td>
-                    <button className="btn-view" onClick={() => viewDetail(r.id)}>
+                    <button className="btn-view" onClick={() => viewDetail(i.id)}>
                       Chi tiết
                     </button>
                   </td>
                 </tr>
               ))
             ) : (
-              <tr><td colSpan="5" className="no-data">Không có phiếu nhập</td></tr>
+              <tr><td colSpan="5" className="no-data">Không có phiếu xuất</td></tr>
             )}
           </tbody>
         </table>
@@ -270,7 +301,7 @@ function ImportGoods() {
         <div className="modal-overlay">
           <div className="modal-content wide">
             <div className="modal-header">
-              <h2>Tạo phiếu nhập kho</h2>
+              <h2>Tạo phiếu xuất kho</h2>
               <button className="close-btn" onClick={() => {
                 resetForm();
                 setShowForm(false);
@@ -280,7 +311,7 @@ function ImportGoods() {
             <form onSubmit={handleSubmit} className="form-container">
               <div className="form-row">
                 <div className="form-group">
-                  <label>Kho nhập *</label>
+                  <label>Kho xuất *</label>
                   <select name="kho_id" value={formData.kho_id} onChange={handleInputChange} required>
                     <option value="">-- Chọn kho --</option>
                     {warehouses.map(w => (
@@ -302,8 +333,8 @@ function ImportGoods() {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label>Ngày nhập</label>
-                  <input type="date" name="ngay_nhap" value={formData.ngay_nhap} onChange={handleInputChange} />
+                  <label>Ngày xuất</label>
+                  <input type="date" name="ngay_xuat" value={formData.ngay_xuat} onChange={handleInputChange} />
                 </div>
                 <div className="form-group">
                   <label>Ghi chú</label>
@@ -312,7 +343,7 @@ function ImportGoods() {
               </div>
 
               <div className="detail-section">
-                <h3>Chi tiết sản phẩm</h3>
+                <h3>Chi tiết sản phẩm xuất</h3>
                 <button type="button" className="btn-add-small" onClick={addProductRow}>
                   + Thêm sản phẩm
                 </button>
@@ -323,15 +354,16 @@ function ImportGoods() {
                       <th>STT</th>
                       <th>Sản phẩm</th>
                       <th>Đơn vị</th>
-                      <th>Số lượng</th>
-                      <th>Vị trí lưu kho</th>
+                      <th>Số lượng xuất</th>
+                      <th>Vị trí lấy hàng</th>
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     {formData.details.map((d, i) => {
-                      // Convert sang number để so sánh đúng (vì select value là string)
                       const selectedProduct = products.find(p => p.id === Number(d.san_pham_id) || p.id === d.san_pham_id);
+                      const availableLocations = getAvailableLocations(d.san_pham_id, formData.kho_id);
+                      
                       return (
                         <tr key={i}>
                           <td>{i + 1}</td>
@@ -362,13 +394,16 @@ function ImportGoods() {
                               value={d.vi_tri_id}
                               onChange={(e) => updateDetail(i, "vi_tri_id", e.target.value)}
                               required
-                              disabled={!formData.kho_id}
+                              disabled={!formData.kho_id || !d.san_pham_id}
                             >
                               <option value="">
-                                {formData.kho_id ? "-- Chọn vị trí --" : "-- Chọn kho trước --"}
+                                {!formData.kho_id ? "-- Chọn kho trước --" : 
+                                 !d.san_pham_id ? "-- Chọn sản phẩm trước --" :
+                                 availableLocations.length === 0 ? "-- Không có vị trí có hàng --" :
+                                 "-- Chọn vị trí --"}
                               </option>
-                              {filteredLocations
-                                .filter(l => !formData.details.some((dd, j) => j !== i && dd.vi_tri_id === l.id))
+                              {availableLocations
+                                .filter(l => !formData.details.some((dd, j) => j !== i && dd.vi_tri_id === l.id && dd.san_pham_id === d.san_pham_id))
                                 .map(l => (
                                   <option key={l.id} value={l.id}>{l.ma_vi_tri}</option>
                                 ))}
@@ -394,7 +429,7 @@ function ImportGoods() {
                   Hủy
                 </button>
                 <button type="submit" className="btn-submit">
-                  Lưu phiếu nhập
+                  Lưu phiếu xuất
                 </button>
               </div>
             </form>
@@ -403,20 +438,20 @@ function ImportGoods() {
       )}
 
       {/* Chi tiết phiếu */}
-      {selectedReceipt && (
+      {selectedIssue && (
         <div className="modal-overlay">
           <div className="modal-content wide">
             <div className="modal-header">
-              <h2>Chi tiết phiếu nhập: {selectedReceipt.ma_phieu}</h2>
+              <h2>Chi tiết phiếu xuất: {selectedIssue.ma_phieu}</h2>
               <button className="close-btn" onClick={closeDetail}>×</button>
             </div>
             <div className="detail-info">
-              <p><strong>Ngày nhập:</strong> {formatDate(selectedReceipt.ngay_nhap)}</p>
-              <p><strong>Kho:</strong> {selectedReceipt.kho?.ten_kho}</p>
-              <p><strong>Khách hàng:</strong> {selectedReceipt.khach_hang?.ten_kh}</p>
-              <p><strong>Ghi chú:</strong> {selectedReceipt.ghi_chu || "-"}</p>
+              <p><strong>Ngày xuất:</strong> {formatDate(selectedIssue.ngay_xuat)}</p>
+              <p><strong>Kho:</strong> {selectedIssue.kho?.ten_kho}</p>
+              <p><strong>Khách hàng:</strong> {selectedIssue.khach_hang?.ten_kh}</p>
+              <p><strong>Ghi chú:</strong> {selectedIssue.ghi_chu || "-"}</p>
             </div>
-            <h3 className="detail-section-title">Sản phẩm nhập</h3>
+            <h3 className="detail-section-title">Sản phẩm xuất</h3>
             <table className="detail-table">
               <thead>
                 <tr>
@@ -428,7 +463,7 @@ function ImportGoods() {
                 </tr>
               </thead>
               <tbody>
-                {selectedReceipt.chi_tiet_nhaps?.map((d, i) => (
+                {selectedIssue.chi_tiet_xuats?.map((d, i) => (
                   <tr key={i}>
                     <td>{i + 1}</td>
                     <td>{d.san_pham?.ten_sp || "-"}</td>
@@ -446,4 +481,5 @@ function ImportGoods() {
   );
 }
 
-export default ImportGoods;
+export default ExportIssue;
+

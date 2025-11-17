@@ -1,6 +1,7 @@
 import initModels from "../models/init-models.js";
 import sequelize from "../config/connect.js";
 import { Op} from "sequelize";
+import { parseDateUTC7 } from "../utils/dateUtils.js";
 
 const models = initModels(sequelize);
 
@@ -23,7 +24,7 @@ const getAllGoodsIssue = async(req, res) =>{
 
 const createAutoGoodsIssue = async (req, res) => {
     try {
-        const { kho_id, khach_hang_id, ghi_chu } = req.body;
+        const { kho_id, khach_hang_id, ghi_chu, ngay_xuat } = req.body;
 
         const lastIssue = await models.phieu_xuat.findOne({
             where: {
@@ -37,15 +38,14 @@ const createAutoGoodsIssue = async (req, res) => {
             const numberPart = parseInt(lastIssue.ma_phieu.replace('PX', ''), 10);
             nextNumber = numberPart + 1;
         }
-
         const ma_phieu = `PX${String(nextNumber).padStart(3, '0')}`;
-
+        const ngayXuatValue = ngay_xuat ? parseDateUTC7(ngay_xuat) : new Date();
         const newIssue = await models.phieu_xuat.create({
             ma_phieu,
             kho_id,
             khach_hang_id,
             ghi_chu: ghi_chu || null,
-            ngay_xuat: new Date()
+            ngay_xuat: ngayXuatValue
         });
         return res.status(201).json({message: "Tạo phiếu xuất thành công", data: newIssue});
     } catch (error) {
@@ -79,21 +79,15 @@ const calculateRemainingQuantity = (tonKho, soLuongXuat) => {
 const exportProduct = async (req, res) => {
     try {
         const { phieu_xuat_id, san_pham_id, so_luong, vi_tri_id } = req.body;
-        
-        // Kiểm tra dữ liệu đầu vào
         if (!phieu_xuat_id || !san_pham_id || !so_luong || !vi_tri_id) {
             return res.status(400).json({ message: "Dữ liệu không hợp lệ. Vui lòng nhập đầy đủ thông tin!" });
         }
-
         const soLuongNum = parseInt(so_luong, 10);
         if (isNaN(soLuongNum) || soLuongNum <= 0) {
             return res.status(400).json({ message: "Số lượng xuất phải là số nguyên dương lớn hơn 0" });
         }
-
         const issue = await models.phieu_xuat.findByPk(phieu_xuat_id);
         if (!issue) return res.status(404).json({ message: "Không tìm thấy phiếu xuất" });
-
-        // Kiểm tra sản phẩm và vị trí tồn tại
         const product = await models.san_pham.findByPk(san_pham_id);
         const location = await models.vi_tri_kho.findByPk(vi_tri_id);
         if (!product || !location) {
@@ -101,32 +95,18 @@ const exportProduct = async (req, res) => {
                 message: `Sản phẩm hoặc vị trí không tồn tại (san_pham_id: ${san_pham_id}, vi_tri_id: ${vi_tri_id})`
             });
         }
-
-        // Kiểm tra vị trí thuộc cùng kho với phiếu xuất
         if (location.kho_id !== issue.kho_id) {
             return res.status(400).json({
                 message: `Vị trí ${vi_tri_id} không thuộc cùng kho với phiếu xuất`
             });
         }
-
-        // Tính số lượng tồn kho tại vị trí này cho sản phẩm này
         const tonKho = await calculateInventory(san_pham_id, vi_tri_id);
-
-        // Kiểm tra: Vị trí phải có sản phẩm (tonKho > 0)
         if (tonKho <= 0) {
-            return res.status(400).json({
-                message: `Vị trí ${vi_tri_id} không có sản phẩm này trong kho`
-            });
+            return res.status(400).json({ message: `Vị trí ${vi_tri_id} không có sản phẩm này trong kho`});
         }
-
-        // Kiểm tra: Không cho phép xuất nhiều hơn số lượng đang có ở vị trí đó
         if (soLuongNum > tonKho) {
-            return res.status(400).json({
-                message: `Số lượng xuất (${soLuongNum}) vượt quá số lượng tồn kho tại vị trí ${vi_tri_id} (${tonKho})`
-            });
+            return res.status(400).json({message: `Số lượng xuất (${soLuongNum}) vượt quá số lượng tồn kho tại vị trí ${vi_tri_id} (${tonKho})`});
         }
-
-        // Tạo chi tiết xuất
         const newDetail = await models.chi_tiet_xuat.create({
             phieu_xuat_id, 
             san_pham_id, 
@@ -142,11 +122,7 @@ const exportProduct = async (req, res) => {
                 { where: { id: vi_tri_id } }
             );
         }
-
-        return res.status(201).json({
-            message: `Đã thêm sản phẩm cần xuất vào phiếu xuất thành công.`,
-            data: newDetail
-        });
+        return res.status(201).json({message: `Đã thêm sản phẩm cần xuất vào phiếu xuất thành công.`, data: newDetail});
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
@@ -199,7 +175,6 @@ const searchGoodsIssue = async (req, res) => {
         }
         const kw = keyword.trim();
         let searchCondition = {};
-
         if (/^PX/i.test(kw)) {
             searchCondition = { ma_phieu: { [Op.like]: `%${kw}%` } };
         } 
@@ -218,7 +193,6 @@ const searchGoodsIssue = async (req, res) => {
                     [day, month, year] = parts;
                 }
             }
-            // Tạo đối tượng Date
             const date = new Date(`${year}-${month}-${day}`);
             if (!isNaN(date.getTime())) {
                 const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);

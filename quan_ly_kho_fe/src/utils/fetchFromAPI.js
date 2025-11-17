@@ -145,4 +145,25 @@ export const goodsReceiptAPI = {
   search: (keyword) =>
     axiosInstance.get(`/goods-receipt/search_goodsreceipt`, { params: { keyword } }).then(res => res.data)
 };
+export const goodsIssueAPI = {
+  // Lấy tất cả phiếu xuất
+  getAll: () =>
+    axiosInstance.get(`/goods-issue/get_all_goodsissue`).then(res => res.data),
+
+  // Tạo phiếu xuất tự động (PX001, PX002...)
+  create: (data) =>
+    axiosInstance.post(`/goods-issue/create_goodsissue`, data).then(res => res.data),
+
+  // Thêm 1 sản phẩm vào phiếu (exportProduct)
+  addProduct: (data) =>
+    axiosInstance.post(`/goods-issue/export_product`, data).then(res => res.data),
+
+  // Lấy chi tiết phiếu xuất theo ID
+  getDetail: (id) =>
+    axiosInstance.get(`/goods-issue/get_detail_goodsissue_byid/${id}`).then(res => res.data),
+
+  // Tìm kiếm phiếu xuất theo mã, kho, ngày
+  search: (keyword) =>
+    axiosInstance.get(`/goods-issue/search_goodsissue`, { params: { keyword } }).then(res => res.data),
+};
 export default axiosInstance;

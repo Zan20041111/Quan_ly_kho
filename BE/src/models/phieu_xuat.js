@@ -5,7 +5,25 @@ export default class phieu_xuat extends Model {
   toJSON() {
     const values = { ...this.get() };
     if (values.ngay_xuat) {
-      values.ngay_xuat = toISOStringUTC7(values.ngay_xuat);
+      try {
+        const formattedDate = toISOStringUTC7(values.ngay_xuat);
+        // Nếu format thành công, dùng formatted date
+        if (formattedDate) {
+          values.ngay_xuat = formattedDate;
+        } else {
+          // Nếu format thất bại, convert Date object thành ISO string đơn giản
+          // để frontend có thể parse được
+          if (values.ngay_xuat instanceof Date && !isNaN(values.ngay_xuat.getTime())) {
+            values.ngay_xuat = values.ngay_xuat.toISOString();
+          }
+          // Nếu đã là string, giữ nguyên
+        }
+      } catch (error) {
+        // Nếu có lỗi, giữ nguyên giá trị gốc hoặc convert an toàn
+        if (values.ngay_xuat instanceof Date && !isNaN(values.ngay_xuat.getTime())) {
+          values.ngay_xuat = values.ngay_xuat.toISOString();
+        }
+      }
     }
     return values;
   }
