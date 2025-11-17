@@ -200,6 +200,7 @@
 
 .form-group input,
 .form-group textarea,
+.form-group select,
 .form-textarea {
     width: 100%;
     padding: 10px 12px;

@@ -4,6 +4,7 @@
     padding: 20px;
     max-width: 1200px;
     margin: 0 auto;
+    animation: slideUpAndFadeIn 1s ease-out;
 }
 
 .title {
@@ -340,4 +341,14 @@
     .modal-header h2 {
         font-size: 1.2rem;
     }
+}
+@keyframes slideUpAndFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
