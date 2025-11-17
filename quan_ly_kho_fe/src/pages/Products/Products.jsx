@@ -238,16 +238,19 @@ function Products() {
               </div>
 
               <div className="form-group">
-                <label>Đơn vị tính *</label>
-                <input
-                  type="text"
-                  name="don_vi_tinh"
-                  value={formData.don_vi_tinh}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="cái, thùng, kg..."
-                />
-              </div>
+                   <label>Đơn vị tính *</label>
+                   <select
+                    name="don_vi_tinh"
+                    value={formData.don_vi_tinh}
+                    onChange={handleInputChange}
+                    required
+                   >
+                    <option value="" disabled>-- Chọn đơn vị --</option> 
+                    <option value="cái">Cái</option>
+                    <option value="thùng">Thùng</option>
+                    <option value="kg">Kg</option>
+                   </select>                  
+             </div>
 
               <div className="form-group">
                 <label>Giá (VNĐ)</label>

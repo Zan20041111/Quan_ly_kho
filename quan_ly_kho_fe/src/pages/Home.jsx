@@ -1,5 +1,14 @@
-// src/pages/Home.jsx
+import React from 'react';
+import './Home.css';
+
 function Home() {
-    return <h1>🏠 Trang chủ</h1>;
+  return (
+    <div className="home-container">
+      <h1 className="fade-in-text">
+        Welcome to KhoSmart.com
+      </h1>
+    </div>
+  );
 }
+
 export default Home;
