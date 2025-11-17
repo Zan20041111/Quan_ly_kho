@@ -2,6 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { productAPI } from "../../utils/fetchFromAPI.js";
 import "./Products.css";
 
+const formatPrice = (price) => {
+  if (!price && price !== 0) return "-";
+  return `${Number(price).toLocaleString('vi-VN')} VNĐ`;
+};
+
 function Products() {
   const [products, setProducts] = useState([]);
   const [filteredList, setFilteredList] = useState([]);
@@ -175,7 +180,7 @@ function Products() {
                   <td>{item.ma_sp}</td>
                   <td>{item.ten_sp}</td>
                   <td>{item.don_vi_tinh}</td>
-                  <td>{item.gia ? `${item.gia.toLocaleString()} đ` : "-"}</td>
+                  <td>{formatPrice(item.gia)}</td>
                   <td>{item.mo_ta || "-"}</td>
                   <td>
                     <div className="action-buttons">
